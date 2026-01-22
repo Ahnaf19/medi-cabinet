@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medi-cabinet-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Persist database
+      - ./data:/app/data
+      # Persist logs
+      - ./logs:/app/logs
+      # Persist backups
+      - ./backups:/app/backups
+    environment:
+      # Override database path to use volume
+      - DATABASE_PATH=/app/data/medi-cabinet.db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: medi-cabinet-network
