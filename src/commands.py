@@ -292,9 +292,7 @@ async def handle_use_medicine(
 
         except DatabaseError as e:
             logger.exception("Database error while using medicine")
-            await update.message.reply_text(
-                " Sorry, there was an error. Please try again."
-            )
+            await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
 
 async def handle_search_medicine(
@@ -356,7 +354,9 @@ async def handle_search_medicine(
                 medicine, confidence = matches[0]
                 response = f" Found: {format_medicine_detail(medicine)}"
             else:
-                response = f" Found {len(matches)} medicine(s) matching *{parsed.medicine_name}*:\n\n"
+                response = (
+                    f" Found {len(matches)} medicine(s) matching *{parsed.medicine_name}*:\n\n"
+                )
                 medicines_only = [med for med, conf in matches]
                 response += format_medicine_list(medicines_only, config.low_stock_threshold)
 
@@ -364,9 +364,7 @@ async def handle_search_medicine(
 
         except DatabaseError as e:
             logger.exception("Database error while searching medicine")
-            await update.message.reply_text(
-                " Sorry, there was an error. Please try again."
-            )
+            await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
 
 async def handle_list_all(
@@ -391,8 +389,7 @@ async def handle_list_all(
 
             if not medicines:
                 await update.message.reply_text(
-                    " Medicine cabinet is empty.\n"
-                    "Add some medicines using `+Napa 10`",
+                    " Medicine cabinet is empty.\n" "Add some medicines using `+Napa 10`",
                     parse_mode=ParseMode.MARKDOWN,
                 )
                 return
@@ -401,9 +398,7 @@ async def handle_list_all(
             response += format_medicine_list(medicines, config.low_stock_threshold)
 
             # Check for low stock
-            low_stock = [
-                m for m in medicines if m.quantity < config.low_stock_threshold
-            ]
+            low_stock = [m for m in medicines if m.quantity < config.low_stock_threshold]
             if low_stock:
                 response += "\n\n" + format_low_stock_alert(low_stock)
 
@@ -411,7 +406,8 @@ async def handle_list_all(
             expiring = [
                 m
                 for m in medicines
-                if m.expiry_date and calculate_days_until_expiry(m.expiry_date) <= config.expiry_warning_days
+                if m.expiry_date
+                and calculate_days_until_expiry(m.expiry_date) <= config.expiry_warning_days
             ]
             if expiring:
                 response += "\n\n" + format_expiry_warning(expiring)
@@ -420,9 +416,7 @@ async def handle_list_all(
 
         except DatabaseError as e:
             logger.exception("Database error while listing medicines")
-            await update.message.reply_text(
-                " Sorry, there was an error. Please try again."
-            )
+            await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
 
 async def handle_delete_medicine(
@@ -440,9 +434,7 @@ async def handle_delete_medicine(
 
     # Check admin permission
     if not is_admin(user_id, config):
-        await update.message.reply_text(
-            " This command is only available to administrators."
-        )
+        await update.message.reply_text(" This command is only available to administrators.")
         return
 
     # Extract medicine name from command
@@ -503,15 +495,11 @@ async def handle_delete_medicine(
                     parse_mode=ParseMode.MARKDOWN,
                 )
             else:
-                await update.message.reply_text(
-                    " Failed to delete medicine. Please try again."
-                )
+                await update.message.reply_text(" Failed to delete medicine. Please try again.")
 
         except DatabaseError as e:
             logger.exception("Database error while deleting medicine")
-            await update.message.reply_text(
-                " Sorry, there was an error. Please try again."
-            )
+            await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
 
 async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

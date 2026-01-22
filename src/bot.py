@@ -71,9 +71,7 @@ class MediCabinetBot:
         self.app.add_handler(CommandHandler("stats", handle_stats))
 
         # Message handler for natural text
-        self.app.add_handler(
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-        )
+        self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
         # Error handler
         self.app.add_error_handler(handle_error)

@@ -46,9 +46,7 @@ class TestMedicineRepository:
         await medicine_repo.add_medicine(sample_medicine_data)
 
         # Find by exact name (case insensitive)
-        found = await medicine_repo.find_by_exact_name(
-            "napa", sample_medicine_data.group_chat_id
-        )
+        found = await medicine_repo.find_by_exact_name("napa", sample_medicine_data.group_chat_id)
 
         assert found is not None
         assert found.name.lower() == sample_medicine_data.name.lower()
@@ -116,9 +114,7 @@ class TestMedicineRepository:
         assert updated.quantity == initial_quantity - 3
 
     @pytest.mark.asyncio
-    async def test_update_quantity_insufficient_stock(
-        self, medicine_repo, sample_medicine_data
-    ):
+    async def test_update_quantity_insufficient_stock(self, medicine_repo, sample_medicine_data):
         """Test that using more than available raises error."""
         medicine = await medicine_repo.add_medicine(sample_medicine_data)
 
@@ -225,9 +221,7 @@ class TestMedicineRepository:
         assert deleted is True
 
         # Verify it's gone
-        found = await medicine_repo.get_by_id(
-            medicine.id, sample_medicine_data.group_chat_id
-        )
+        found = await medicine_repo.get_by_id(medicine.id, sample_medicine_data.group_chat_id)
         assert found is None
 
     @pytest.mark.asyncio

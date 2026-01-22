@@ -38,7 +38,8 @@ async def test_db():
 
     async with Database(db_path) as db:
         # Create tables manually for in-memory database
-        await db.execute("""
+        await db.execute(
+            """
             CREATE TABLE medicines (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL COLLATE NOCASE,
@@ -53,14 +54,18 @@ async def test_db():
                 last_updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(group_chat_id, name COLLATE NOCASE)
             )
-        """)
+        """
+        )
 
-        await db.execute("""
+        await db.execute(
+            """
             CREATE INDEX idx_medicines_group_name
             ON medicines(group_chat_id, name COLLATE NOCASE)
-        """)
+        """
+        )
 
-        await db.execute("""
+        await db.execute(
+            """
             CREATE TABLE activity_log (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 medicine_id INTEGER NOT NULL,
@@ -73,12 +78,15 @@ async def test_db():
                 FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE,
                 CHECK (action IN ('added', 'used', 'searched', 'deleted'))
             )
-        """)
+        """
+        )
 
-        await db.execute("""
+        await db.execute(
+            """
             CREATE INDEX idx_activity_timestamp
             ON activity_log(timestamp DESC)
-        """)
+        """
+        )
 
         yield db
 

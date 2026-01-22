@@ -90,13 +90,28 @@ class AddCommandParser:
 
     # Unit patterns
     UNIT_KEYWORDS = [
-        "tablet", "tablets", "tab", "tabs",
-        "capsule", "capsules", "cap", "caps",
-        "ml", "milliliter", "milliliters",
-        "mg", "milligram", "milligrams",
-        "strip", "strips",
-        "bottle", "bottles",
-        "piece", "pieces", "pcs", "pc",
+        "tablet",
+        "tablets",
+        "tab",
+        "tabs",
+        "capsule",
+        "capsules",
+        "cap",
+        "caps",
+        "ml",
+        "milliliter",
+        "milliliters",
+        "mg",
+        "milligram",
+        "milligrams",
+        "strip",
+        "strips",
+        "bottle",
+        "bottles",
+        "piece",
+        "pieces",
+        "pcs",
+        "pc",
     ]
 
     def parse(self, text: str) -> Optional[ParsedCommand]:
@@ -113,10 +128,7 @@ class AddCommandParser:
         # Check if this looks like an add command
         if not (
             text_lower.startswith("+")
-            or any(
-                keyword in text_lower
-                for keyword in ["bought", "got", "purchase", "add"]
-            )
+            or any(keyword in text_lower for keyword in ["bought", "got", "purchase", "add"])
             or re.match(r"^\d+\s+\w+", text_lower)
         ):
             return None
@@ -344,10 +356,7 @@ class SearchCommandParser:
         # Check if this looks like a search command
         if not (
             text_lower.startswith("?")
-            or any(
-                keyword in text_lower
-                for keyword in ["have", "check", "search", "find", "show"]
-            )
+            or any(keyword in text_lower for keyword in ["have", "check", "search", "find", "show"])
         ):
             return None
 

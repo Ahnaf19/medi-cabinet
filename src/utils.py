@@ -297,11 +297,7 @@ def build_medicine_selection_keyboard(
             button_text += f" - {confidence}% match"
 
         keyboard.append(
-            [
-                InlineKeyboardButton(
-                    button_text, callback_data=f"{prefix}:{medicine.id}"
-                )
-            ]
+            [InlineKeyboardButton(button_text, callback_data=f"{prefix}:{medicine.id}")]
         )
 
     keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
@@ -319,7 +315,26 @@ def escape_markdown_v2(text: str) -> str:
         Escaped text
     """
     # Characters that need to be escaped in MarkdownV2
-    special_chars = ["_", "*", "[", "]", "(", ")", "~", "`", ">", "#", "+", "-", "=", "|", "{", "}", ".", "!"]
+    special_chars = [
+        "_",
+        "*",
+        "[",
+        "]",
+        "(",
+        ")",
+        "~",
+        "`",
+        ">",
+        "#",
+        "+",
+        "-",
+        "=",
+        "|",
+        "{",
+        "}",
+        ".",
+        "!",
+    ]
 
     for char in special_chars:
         text = text.replace(char, f"\\{char}")
@@ -342,9 +357,7 @@ def format_low_stock_alert(medicines: List[Medicine]) -> str:
     lines = [" *Low Stock Alert!*\n"]
 
     for medicine in medicines:
-        lines.append(
-            f" *{medicine.name}* - Only {medicine.quantity} {medicine.unit} left!"
-        )
+        lines.append(f" *{medicine.name}* - Only {medicine.quantity} {medicine.unit} left!")
 
     return "\n".join(lines)
 

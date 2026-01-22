@@ -64,9 +64,7 @@ class InsufficientStockError(DatabaseError):
     def __init__(self, available: int, requested: int):
         self.available = available
         self.requested = requested
-        super().__init__(
-            f"Insufficient stock: {available} available, {requested} requested"
-        )
+        super().__init__(f"Insufficient stock: {available} available, {requested} requested")
 
 
 class Database:
@@ -167,9 +165,7 @@ class MedicineRepository:
             name=row["name"],
             quantity=row["quantity"],
             unit=row["unit"],
-            expiry_date=datetime.fromisoformat(row["expiry_date"])
-            if row["expiry_date"]
-            else None,
+            expiry_date=datetime.fromisoformat(row["expiry_date"]) if row["expiry_date"] else None,
             location=row["location"],
             added_by_user_id=row["added_by_user_id"],
             added_by_username=row["added_by_username"],
@@ -205,9 +201,7 @@ class MedicineRepository:
                 (new_quantity, data.expiry_date, data.location, existing.id),
             )
             # Fetch and return updated medicine
-            row = await self.db.fetch_one(
-                "SELECT * FROM medicines WHERE id = ?", (existing.id,)
-            )
+            row = await self.db.fetch_one("SELECT * FROM medicines WHERE id = ?", (existing.id,))
         else:
             # Insert new medicine
             cursor = await self.db.execute(
@@ -291,9 +285,7 @@ class MedicineRepository:
 
         return self._row_to_medicine(updated_row)
 
-    async def find_by_exact_name(
-        self, name: str, group_chat_id: int
-    ) -> Optional[Medicine]:
+    async def find_by_exact_name(self, name: str, group_chat_id: int) -> Optional[Medicine]:
         """Find medicine by exact name (case-insensitive).
 
         Args:
@@ -406,9 +398,7 @@ class MedicineRepository:
 
         return [self._row_to_medicine(row) for row in rows]
 
-    async def get_expiring_soon(
-        self, group_chat_id: int, days: int = 30
-    ) -> List[Medicine]:
+    async def get_expiring_soon(self, group_chat_id: int, days: int = 30) -> List[Medicine]:
         """Get medicines expiring within specified days.
 
         Args:
@@ -529,9 +519,7 @@ class ActivityLogRepository:
 
         return self._row_to_activity(row)
 
-    async def get_history(
-        self, medicine_id: int, limit: int = 50
-    ) -> List[Activity]:
+    async def get_history(self, medicine_id: int, limit: int = 50) -> List[Activity]:
         """Get activity history for a medicine.
 
         Args:
@@ -615,16 +603,12 @@ class ActivityLogRepository:
 
         return {
             "total_activities": total_row["count"] if total_row else 0,
-            "activities_by_action": {
-                row["action"]: row["count"] for row in action_rows
-            },
+            "activities_by_action": {row["action"]: row["count"] for row in action_rows},
             "most_active_users": [
-                {"username": row["username"], "count": row["count"]}
-                for row in user_rows
+                {"username": row["username"], "count": row["count"]} for row in user_rows
             ],
             "most_used_medicines": [
-                {"name": row["name"], "usage_count": row["usage_count"]}
-                for row in medicine_rows
+                {"name": row["name"], "usage_count": row["usage_count"]} for row in medicine_rows
             ],
             "period_days": days,
         }
