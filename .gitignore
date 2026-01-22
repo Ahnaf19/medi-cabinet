@@ -205,3 +205,22 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project-specific: Medi-Cabinet Bot
+# SQLite database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Bot logs
+logs/
+*.log
+
+# Backup files
+backups/
+*.backup
+
+# Temporary files
+temp/
+tmp/
