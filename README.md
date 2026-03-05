@@ -1,5 +1,6 @@
 # 💊 Medi-Cabinet Bot
 
+[![CI](https://github.com/ahnaftanjid/medi-cabinet/actions/workflows/ci.yml/badge.svg)](https://github.com/ahnaftanjid/medi-cabinet/actions/workflows/ci.yml)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-production-success)
