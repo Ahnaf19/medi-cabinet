@@ -1,22 +1,21 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 import asyncio
-from datetime import datetime
-from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from config.config import Settings
 from src.database import (
-    Database,
-    MedicineRepository,
     ActivityLogRepository,
-    RoutineRepository,
-    RoutineLogRepository,
-    DrugInteractionRepository,
     CostRepository,
+    Database,
+    DrugInteractionRepository,
     MedicineData,
+    MedicineRepository,
     RoutineData,
-    CostData,
+    RoutineLogRepository,
+    RoutineRepository,
 )
 
 
@@ -270,3 +269,31 @@ def sample_routine_data():
         created_by_username="TestUser",
         group_chat_id=789012,
     )
+
+
+@pytest.fixture
+def mock_update():
+    """Create a mock Telegram Update for handler tests."""
+    update = AsyncMock()
+    update.effective_user = MagicMock()
+    update.effective_user.id = 123456
+    update.effective_user.first_name = "TestUser"
+    update.effective_chat = MagicMock()
+    update.effective_chat.id = 789012
+    update.message = AsyncMock()
+    update.message.text = ""
+    update.message.reply_text = AsyncMock()
+    update.effective_message = update.message
+    return update
+
+
+@pytest.fixture
+def mock_context(test_config):
+    """Create a mock Telegram Context for handler tests."""
+    context = MagicMock()
+    context.bot_data = {
+        "config": test_config,
+    }
+    context.bot = AsyncMock()
+    context.args = []
+    return context
