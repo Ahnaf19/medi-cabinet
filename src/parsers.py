@@ -7,7 +7,9 @@ from typing import Optional, Literal
 from dateutil import parser as date_parser
 
 
-CommandType = Literal["add", "use", "search", "list", "unknown"]
+CommandType = Literal[
+    "add", "use", "search", "list", "routine", "cost", "interactions", "analytics", "unknown"
+]
 
 
 @dataclass
@@ -22,6 +24,12 @@ class ParsedCommand:
     location: Optional[str] = None
     confidence: float = 1.0
     raw_text: str = ""
+    # Phase 4: Routine fields
+    meal_relation: Optional[str] = None
+    schedule_times: Optional[list] = None
+    frequency: Optional[str] = None
+    # Phase 5: Cost field
+    cost: Optional[float] = None
 
 
 class CommandParser:
@@ -33,6 +41,8 @@ class CommandParser:
         self.use_parser = UseCommandParser()
         self.search_parser = SearchCommandParser()
         self.list_parser = ListCommandParser()
+        self.routine_parser = RoutineCommandParser()
+        self.cost_parser = CostCommandParser()
 
     def parse(self, text: str) -> ParsedCommand:
         """Parse text and return structured command.
@@ -47,6 +57,16 @@ class CommandParser:
 
         # Try list command first (simple patterns)
         if result := self.list_parser.parse(text):
+            result.raw_text = text
+            return result
+
+        # Try routine command
+        if result := self.routine_parser.parse(text):
+            result.raw_text = text
+            return result
+
+        # Try cost command
+        if result := self.cost_parser.parse(text):
             result.raw_text = text
             return result
 
@@ -407,5 +427,145 @@ class ListCommandParser:
                     command_type="list",
                     confidence=1.0,
                 )
+
+        return None
+
+
+class RoutineCommandParser:
+    """Parser for routine/schedule commands."""
+
+    # Patterns: "Take Napa at 8AM daily", "Remind me Sergel before meal"
+    PATTERNS = [
+        # "take Napa 1 tablet at 08:00 daily before meal"
+        r"(?:take|remind(?:\s+me)?)\s+(\w+(?:\s+\w+)?)\s+(\d+)?\s*(?:tablet|cap|ml)?\s*(?:at\s+)?(\d{1,2}[:.]\d{2}(?:\s*(?:am|pm))?)?(?:\s+(\w+))?\s*(?:(before|after|with)\s*meal)?",
+        # "remind Napa at 8AM and 8PM daily"
+        r"(?:take|remind(?:\s+me)?)\s+(\w+(?:\s+\w+)?)\s+(?:at\s+)?(\d{1,2}[:.]\d{2}(?:\s*(?:am|pm))?)(?:\s+(?:and|,)\s+(\d{1,2}[:.]\d{2}(?:\s*(?:am|pm))?))?",
+    ]
+
+    # Time conversion helpers
+    TIME_PATTERN = re.compile(r"(\d{1,2})[:.:](\d{2})\s*(am|pm)?", re.IGNORECASE)
+
+    def parse(self, text: str) -> Optional[ParsedCommand]:
+        """Parse routine commands."""
+        text_lower = text.lower().strip()
+
+        # Must contain routine-related keywords
+        if not any(kw in text_lower for kw in ["take", "remind", "routine", "schedule"]):
+            return None
+
+        # Must also contain time-related indicators
+        if not any(
+            kw in text_lower
+            for kw in ["daily", "weekly", "every", "at ", "am", "pm", "morning", "evening"]
+        ):
+            return None
+
+        # Extract medicine name (first word after trigger keyword)
+        name_match = re.search(
+            r"(?:take|remind(?:\s+me)?|routine\s+(?:add\s+)?)\s+(\w+(?:\s+\w+)?)",
+            text_lower,
+        )
+        if not name_match:
+            return None
+
+        medicine_name = name_match.group(1).strip().title()
+
+        # Remove common non-medicine words
+        for word in ["me", "to", "my", "the", "a"]:
+            if medicine_name.lower() == word:
+                return None
+
+        # Extract times
+        times = []
+        for m in self.TIME_PATTERN.finditer(text_lower):
+            hour, minute = int(m.group(1)), int(m.group(2))
+            ampm = m.group(3)
+            if ampm:
+                if ampm.lower() == "pm" and hour != 12:
+                    hour += 12
+                elif ampm.lower() == "am" and hour == 12:
+                    hour = 0
+            times.append(f"{hour:02d}:{minute:02d}")
+
+        # Handle word-based times
+        if not times:
+            if "morning" in text_lower:
+                times.append("08:00")
+            if "evening" in text_lower or "night" in text_lower:
+                times.append("20:00")
+            if "afternoon" in text_lower:
+                times.append("14:00")
+
+        if not times:
+            times = ["08:00"]  # Default
+
+        # Frequency
+        frequency = "daily"
+        if "weekly" in text_lower:
+            frequency = "weekly"
+        elif "every other day" in text_lower or "alternate" in text_lower:
+            frequency = "every_other_day"
+
+        # Meal relation
+        meal_relation = None
+        if "before meal" in text_lower or "before food" in text_lower:
+            meal_relation = "before_meal"
+        elif "after meal" in text_lower or "after food" in text_lower:
+            meal_relation = "after_meal"
+        elif "with meal" in text_lower or "with food" in text_lower:
+            meal_relation = "with_meal"
+
+        # Quantity
+        qty_match = re.search(r"(\d+)\s*(?:tablet|tab|cap|ml|piece)", text_lower)
+        quantity = int(qty_match.group(1)) if qty_match else 1
+
+        return ParsedCommand(
+            command_type="routine",
+            medicine_name=medicine_name,
+            quantity=quantity,
+            schedule_times=times,
+            frequency=frequency,
+            meal_relation=meal_relation,
+            confidence=0.9,
+        )
+
+
+class CostCommandParser:
+    """Parser for cost-related commands."""
+
+    # Patterns: "+Napa 10 cost 50tk", "cost Napa 50", "Napa cost 100 taka"
+    COST_PATTERN = re.compile(
+        r"(?:cost|price|paid)\s+(\w+(?:\s+\w+)?)\s+(\d+(?:\.\d+)?)\s*(?:tk|taka|bdt)?",
+        re.IGNORECASE,
+    )
+    COST_SUFFIX_PATTERN = re.compile(
+        r"(\w+(?:\s+\w+)?)\s+cost\s+(\d+(?:\.\d+)?)\s*(?:tk|taka|bdt)?",
+        re.IGNORECASE,
+    )
+
+    def parse(self, text: str) -> Optional[ParsedCommand]:
+        """Parse cost commands."""
+        text_lower = text.lower().strip()
+
+        if "cost" not in text_lower and "price" not in text_lower and "paid" not in text_lower:
+            return None
+
+        # Try "cost Napa 50tk"
+        if match := self.COST_PATTERN.search(text_lower):
+            return ParsedCommand(
+                command_type="cost",
+                medicine_name=match.group(1).strip().title(),
+                cost=float(match.group(2)),
+                confidence=1.0,
+            )
+
+        # Try "Napa cost 100 taka"
+        if match := self.COST_SUFFIX_PATTERN.search(text_lower):
+            return ParsedCommand(
+                command_type="cost",
+                medicine_name=match.group(1).strip().title(),
+                cost=float(match.group(2)),
+                confidence=1.0,
+            )
 
         return None

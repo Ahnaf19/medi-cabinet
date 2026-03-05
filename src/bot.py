@@ -4,6 +4,7 @@ import sys
 from datetime import time
 from telegram.ext import (
     Application,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     filters,
@@ -17,6 +18,13 @@ from src.commands import (
     handle_message,
     handle_delete_medicine,
     handle_stats,
+    handle_routine,
+    handle_routine_callback,
+    handle_check_interactions,
+    handle_add_cost,
+    handle_cost_summary,
+    handle_photo,
+    handle_analytics,
     handle_error,
     scheduled_expiry_check,
     scheduled_backup,
@@ -64,11 +72,29 @@ class MediCabinetBot:
 
     def _register_handlers(self) -> None:
         """Register all command and message handlers."""
-        # Command handlers
+        # Command handlers (Phase 1)
         self.app.add_handler(CommandHandler("start", handle_start))
         self.app.add_handler(CommandHandler("help", handle_help))
         self.app.add_handler(CommandHandler("delete", handle_delete_medicine))
         self.app.add_handler(CommandHandler("stats", handle_stats))
+
+        # Phase 4: Routine handlers
+        self.app.add_handler(CommandHandler("routine", handle_routine))
+        self.app.add_handler(CommandHandler("routines", handle_routine))
+        self.app.add_handler(CallbackQueryHandler(handle_routine_callback, pattern=r"^routine_"))
+
+        # Phase 4: Drug interaction handler
+        self.app.add_handler(CommandHandler("interactions", handle_check_interactions))
+
+        # Phase 5: Cost tracking handlers
+        self.app.add_handler(CommandHandler("cost", handle_add_cost))
+        self.app.add_handler(CommandHandler("costs", handle_cost_summary))
+
+        # Phase 5: Analytics handler
+        self.app.add_handler(CommandHandler("analytics", handle_analytics))
+
+        # Phase 3: Photo handler (medicine packet/prescription)
+        self.app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
         # Message handler for natural text
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
@@ -108,6 +134,25 @@ class MediCabinetBot:
         """
         # Store config in bot_data for access in handlers
         application.bot_data["config"] = self.config
+
+        # Initialize LLM provider (Phase 2)
+        from src.llm.factory import LLMProviderFactory
+
+        llm_provider = LLMProviderFactory.from_config(self.config)
+        application.bot_data["llm_provider"] = llm_provider
+
+        # Initialize routine scheduler (Phase 4)
+        if application.job_queue:
+            from src.scheduler import RoutineScheduler
+
+            scheduler = RoutineScheduler(application.job_queue, self.config.database_path)
+            application.bot_data["scheduler"] = scheduler
+            try:
+                count = await scheduler.load_all_routines()
+                logger.info(f"Loaded {count} active routines")
+            except Exception as e:
+                logger.warning(f"Could not load routines (tables may not exist yet): {e}")
+
         logger.info("Bot initialized successfully")
 
     async def post_shutdown(self, application: Application) -> None:
