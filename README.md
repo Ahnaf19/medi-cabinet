@@ -36,25 +36,29 @@ graph LR
 - **Multi-Group Support**: Each family group has isolated data
 - **Activity Logging**: Complete audit trail of all actions
 
-### Phase 2: Future (LLM-Enhanced)
+### Full Architecture (Phases 1-5)
 
 ```mermaid
 graph LR
-    A[👥 Telegram] --> B[🤖 Bot]
-    B --> C{🧠 LLM Router}
-    C --> D[Claude API]
-    D --> E[🔧 MCP Tools]
-    E --> F[🔍 Vector DB<br/>ChromaDB]
-    E --> G[🗄️ SQLite]
-    E --> H[📷 OCR/Vision]
-    E --> I[💊 Drug Interactions<br/>RAG]
+    A[👥 Family Group Chat] --> B[🤖 Telegram Bot]
+    B --> C[📝 NLU: Regex + LLM Fallback]
+    C --> D[⚙️ Command Handlers]
+    D --> E[🗄️ SQLite Database]
+    D --> F[📊 Services Layer]
+    F --> G[🧠 LLM Provider<br/>Groq/OpenAI/Anthropic]
+    F --> H[📷 Vision LLM<br/>Photo Recognition]
+    F --> I[💊 Drug Interactions]
+    F --> J[⏰ Routine Scheduler]
+    F --> K[💰 Cost Tracking]
 ```
 
-**Planned Enhancements:**
-- **LLM Integration**: Claude API for advanced natural language understanding
-- **Image Processing**: OCR for reading prescriptions and medicine packets
-- **Drug Interactions**: RAG-based warnings for medicine interactions
-- **Routine Reminders**: Track medicine schedules with alarms
+**Key Components:**
+- **Multi-Tier NLU**: Regex (Tier 1, free/fast) with LLM fallback (Tier 2, when configured)
+- **LLM Factory**: Pluggable provider system — Groq (primary), OpenAI, Anthropic
+- **Vision Processing**: Photo → LLM extraction → confirm → add to inventory
+- **Routine Scheduler**: JobQueue-based alarms with Taken/Skip inline keyboards
+- **Drug Interactions**: 30 common BD medicine interaction pairs with severity warnings
+- **Cost Tracking**: Per-medicine spending, summaries, and analytics
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -179,6 +183,14 @@ Bot: 💊 Medicine Cabinet (Total: 3)
 | **List All** | `?all` | List all medicines |
 | | `list medicines` | Alternative list |
 | | `inventory` | Show inventory |
+| **Routines** | `/routine add Napa at 08:00 daily` | Set medicine reminders |
+| | `/routine list` | View active routines |
+| | `/routine pause 1` | Pause/resume a routine |
+| **Interactions** | `/interactions Napa` | Check drug interactions |
+| **Cost** | `/cost Napa 50` | Record medicine cost |
+| | `/costs` | View cost summary |
+| **Photo** | Send a photo | Auto-extract from medicine packet |
+| **Analytics** | `/analytics` | Usage patterns & predictions |
 | **Delete** | `/delete Napa` | Delete medicine (admin only) |
 | **Statistics** | `/stats` | Show usage statistics |
 | **Help** | `/help` | Show detailed help |
@@ -190,22 +202,42 @@ Bot: 💊 Medicine Cabinet (Total: 3)
 ```
 medi-cabinet/
 ├── src/
-│   ├── bot.py              # Main bot application
-│   ├── commands.py         # Command handlers
-│   ├── parsers.py          # Natural language parsing
-│   ├── database.py         # Database operations (repository pattern)
-│   └── utils.py            # Helper functions
+│   ├── bot.py              # Main bot application & handler registration
+│   ├── commands.py         # Command handlers (add, use, search, routine, cost, photo)
+│   ├── parsers.py          # Multi-tier NLU (regex + routine + cost parsers)
+│   ├── database.py         # Repository pattern (6 repos, 8 entity dataclasses)
+│   ├── scheduler.py        # Routine alarm scheduling via JobQueue
+│   ├── utils.py            # Formatting & validation helpers
+│   ├── llm/                # LLM integration layer (see src/llm/README.md)
+│   │   ├── base.py         # Abstract provider, LLMMessage, LLMResponse, ToolCall
+│   │   ├── factory.py      # Registry-based provider factory
+│   │   ├── parser.py       # Tier 2 LLM parser fallback
+│   │   ├── tools.py        # Tool schemas for structured extraction
+│   │   └── providers/      # Groq (full), OpenAI, Anthropic (placeholders)
+│   └── services/           # Business logic (see src/services/README.md)
+│       ├── routine_service.py
+│       ├── interaction_service.py
+│       ├── image_service.py
+│       └── analytics_service.py
 ├── config/
 │   └── config.py           # Configuration management (Pydantic)
+├── data/
+│   └── drug_interactions.json  # 30 BD medicine interaction pairs
 ├── migrations/
 │   ├── env.py              # Alembic environment
-│   └── versions/           # Database migrations
-├── tests/
-│   ├── conftest.py         # Pytest fixtures
+│   └── versions/           # 4 migration files (001-004)
+├── tests/                  # 170 tests (see tests/README.md)
+│   ├── conftest.py         # Shared fixtures
 │   ├── test_parsers.py     # Parser tests
-│   └── test_database.py    # Database tests
+│   ├── test_database.py    # Database tests
+│   ├── test_utils.py       # Utility function tests
+│   ├── test_llm/           # LLM layer tests
+│   └── test_services/      # Service & repo tests
+├── scripts/
+│   └── seed_data.py        # Demo data seeding
 ├── docs/
-│   └── ARCHITECTURE.md     # Detailed architecture documentation
+│   ├── ARCHITECTURE.md     # Detailed architecture documentation
+│   └── USER_GUIDE.md       # End-user guide
 ├── .env.example            # Environment variable template
 ├── pyproject.toml          # Project dependencies and config
 ├── alembic.ini             # Database migration config
@@ -327,11 +359,20 @@ ADMIN_USER_IDS=123456789,987654321
 LOW_STOCK_THRESHOLD=3              # Alert when quantity < this
 EXPIRY_WARNING_DAYS=30             # Warn when expiring within N days
 FUZZY_MATCH_THRESHOLD=80           # Fuzzy matching sensitivity (0-100)
+
+# LLM Integration (optional — leave empty to disable)
+LLM_PROVIDER=groq                  # groq, openai, or anthropic
+LLM_API_KEY=your-api-key
+LLM_MODEL=llama-3.3-70b-versatile  # Model ID for the provider
+LLM_TEMPERATURE=0.0
+
+# Cost Tracking
+DEFAULT_CURRENCY=BDT
 ```
 
 ## 🗺️ Roadmap
 
-- [x] **Phase 1: Text-Based Tracking (Current)**
+- [x] **Phase 1: Text-Based Tracking**
   - [x] Natural language command parsing
   - [x] Fuzzy medicine name matching
   - [x] Multi-group support with data isolation
@@ -339,26 +380,29 @@ FUZZY_MATCH_THRESHOLD=80           # Fuzzy matching sensitivity (0-100)
   - [x] Low stock and expiry alerts
   - [x] Docker deployment
 
-- [ ] **Phase 2: LLM Integration**
-  - [ ] Claude API for advanced NLU
-  - [ ] MCP (Model Context Protocol) for tool calling
-  - [ ] Structured data extraction
+- [x] **Phase 2: LLM Integration**
+  - [x] Pluggable LLM providers (Groq, OpenAI, Anthropic)
+  - [x] Factory pattern with auto-registration
+  - [x] Tool calling for structured data extraction
+  - [x] Tier 2 LLM fallback for ambiguous messages
 
-- [ ] **Phase 3: Image Processing**
-  - [ ] OCR for prescription reading
-  - [ ] Vision LLM for medicine packet recognition
-  - [ ] Automatic expiry date extraction from photos
+- [x] **Phase 3: Image Processing**
+  - [x] Vision LLM for medicine packet recognition
+  - [x] Photo → extract → confirm → add flow
+  - [x] Support for base64 and URL image inputs
 
-- [ ] **Phase 4: Smart Features**
-  - [ ] Medicine interaction warnings (RAG-based)
-  - [ ] Vector database for similarity search (ChromaDB)
-  - [ ] Routine tracking with alarms
-  - [ ] Before/after meal reminders
+- [x] **Phase 4: Smart Features**
+  - [x] Drug interaction warnings (30 BD medicine pairs)
+  - [x] Routine tracking with daily/weekly schedules
+  - [x] Alarm reminders via JobQueue
+  - [x] Before/after/with meal reminders
+  - [x] Taken/Skip inline keyboard callbacks
 
-- [ ] **Phase 5: Analytics & Insights**
-  - [ ] Usage patterns analysis
-  - [ ] Predictive inventory alerts
-  - [ ] Cost tracking and savings calculator
+- [x] **Phase 5: Analytics & Insights**
+  - [x] Usage pattern analysis
+  - [x] Restock predictions based on consumption rate
+  - [x] Cost tracking per medicine
+  - [x] Adherence statistics
 
 ## 🤝 Contributing
 

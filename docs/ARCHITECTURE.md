@@ -14,62 +14,90 @@ The Medi-Cabinet Bot follows a clean, layered architecture designed for maintain
 ┌───────────────────▼─────────────────────────────────┐
 │              Bot Layer (bot.py)                       │
 │  - Telegram handlers registration                    │
-│  - Job scheduling (expiry checks, backups)           │
+│  - Job scheduling (expiry checks, routine alarms)    │
+│  - LLM provider & scheduler initialization           │
 │  - Error handling                                    │
 └───────────────────┬─────────────────────────────────┘
                     │
 ┌───────────────────▼─────────────────────────────────┐
 │         Command Layer (commands.py)                   │
 │  - Route commands to handlers                        │
-│  - Orchestrate business logic                        │
-│  - Format responses                                  │
+│  - Handle routines, costs, interactions, photos      │
+│  - Tier 2 LLM fallback for ambiguous text            │
+│  - Inline keyboard callbacks (Taken/Skip)            │
 └──────┬────────────┬──────────────┬──────────────────┘
        │            │              │
        ▼            ▼              ▼
 ┌──────────┐  ┌──────────┐  ┌────────────┐
-│ Parsers  │  │ Database │  │  Utilities │
-│  (NLP)   │  │  (Repo)  │  │ (Formatters)│
-└──────────┘  └──────────┘  └────────────┘
-                    │
-┌───────────────────▼─────────────────────────────────┐
-│               SQLite Database                         │
-│  - medicines table                                   │
-│  - activity_log table                                │
-└─────────────────────────────────────────────────────┘
+│ Parsers  │  │ Services │  │  Utilities │
+│(Regex+LLM)│ │  Layer   │  │(Formatters)│
+└──────────┘  └────┬─────┘  └────────────┘
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Database │ │   LLM    │ │Scheduler │
+│  (Repos) │ │ Factory  │ │(JobQueue)│
+└────┬─────┘ └────┬─────┘ └──────────┘
+     │             │
+     ▼             ▼
+┌──────────┐ ┌──────────────┐
+│  SQLite  │ │ Groq/OpenAI/ │
+│ (6 tables)│ │  Anthropic   │
+└──────────┘ └──────────────┘
 ```
 
 ### 1.2 Component Responsibilities
 
 **Bot Layer** (`src/bot.py`)
 - Initialize Telegram application
-- Register command and message handlers
-- Setup scheduled jobs (expiry checks at 9 AM, backups at 3 AM)
+- Register command, message, photo, and callback handlers
+- Setup scheduled jobs (expiry checks at 9 AM)
+- Initialize LLM provider and routine scheduler at startup
 - Configure logging with loguru
 - Graceful startup and shutdown
 
 **Command Layer** (`src/commands.py`)
-- Handle user commands (`/start`, `/help`, `/delete`, `/stats`)
-- Process natural text messages
-- Coordinate between parsers and database
-- Generate user-friendly responses with emojis and formatting
+- Handle user commands (`/start`, `/help`, `/delete`, `/stats`, `/routine`, `/cost`, `/costs`, `/interactions`, `/analytics`)
+- Process natural text messages with multi-tier NLU
+- Handle photo messages via vision LLM
+- Inline keyboard callbacks for routine Taken/Skip actions
 - Admin authorization checks
 
 **Parser Layer** (`src/parsers.py`)
 - Natural language understanding with regex patterns
-- Command type detection (add, use, search, list)
-- Extract structured data (medicine name, quantity, unit, expiry, location)
+- Command type detection (add, use, search, list, routine, cost, interactions, analytics)
+- `RoutineCommandParser`: Time parsing (AM/PM, word-based), frequency, meal relation
+- `CostCommandParser`: "cost Napa 50tk", "Napa cost 100 taka"
 - Confidence scoring for ambiguous matches
 
+**LLM Layer** (`src/llm/`)
+- `BaseLLMProvider`: Abstract interface with `complete()` and `complete_with_vision()`
+- `LLMProviderFactory`: Registry-based factory with auto-registration
+- `LLMParser`: Tier 2 fallback using tool calling for structured extraction
+- Providers: Groq (full), OpenAI, Anthropic (placeholders)
+- All use raw `httpx` — no SDK dependencies
+
+**Service Layer** (`src/services/`)
+- `RoutineService`: CRUD + scheduler + stock deduction on "taken"
+- `InteractionService`: Check new medicines against cabinet, seed from JSON
+- `ImageService`: Vision LLM extraction from medicine packet photos
+- `AnalyticsService`: Usage patterns, restock predictions, cost summaries
+
 **Database Layer** (`src/database.py`)
-- Repository pattern for clean data access
-- Medicine CRUD operations
-- Activity logging
+- Repository pattern for clean data access (6 repositories)
+- Entity dataclasses: Medicine, Activity, Routine, RoutineLog, DrugInteraction, MedicineCost
 - Fuzzy name matching with fuzzywuzzy
 - Multi-group isolation (critical for privacy)
 - Transaction support for atomic operations
 
+**Scheduler** (`src/scheduler.py`)
+- `RoutineScheduler`: Integrates with python-telegram-bot `JobQueue`
+- Loads active routines at startup, schedules `run_daily` per time slot
+- Sends inline keyboard reminders (Taken/Skip), marks missed on timeout
+
 **Utility Layer** (`src/utils.py`)
-- Formatting functions (lists, dates, statistics)
+- Formatting functions (medicines, routines, interactions, costs, analytics, adherence)
 - Validation helpers
 - Keyboard builders for inline buttons
 - Message templates (welcome, help)
@@ -123,23 +151,26 @@ The Medi-Cabinet Bot follows a clean, layered architecture designed for maintain
 
 **Multi-Tier Approach:**
 
-1. **Regex First** (Fast, Deterministic)
+1. **Tier 1: Regex** (Fast, Deterministic, Free)
    - Priority-ordered patterns for each command type
    - Handle common variations (`+Napa 10`, `Bought Napa 10`)
+   - Includes specialized parsers for routines and costs
 
 2. **Fuzzy Matching** (Typo Tolerance)
    - Levenshtein distance with python-Levenshtein (C extension)
    - Confidence scoring (0-100)
    - Pre-filter by first letter for performance
 
-3. **Future: LLM Fallback**
-   - Claude API for complex natural language
-   - Structured extraction with MCP tools
+3. **Tier 2: LLM Fallback** (When Configured)
+   - Activates only when Tier 1 returns `unknown`
+   - Uses tool calling via `MEDICINE_EXTRACTION_TOOL` for structured output
+   - Maps LLM `ToolCall` → `ParsedCommand` with confidence=0.8
+   - Graceful degradation: returns `None` on failure
 
 **Why Not LLM-Only?**
 - Regex is instant and deterministic
 - No API costs for simple commands
-- LLM can be added as enhancement, not replacement
+- LLM is enhancement, not replacement — bot works fully without it
 
 ## 3. Database Schema Rationale
 
@@ -200,7 +231,56 @@ CREATE TABLE activity_log (
 - **Audit trail**: Who did what and when
 - **Usage analytics**: Most used medicines, most active users
 - **Debugging**: Track down issues with user actions
-- **Future ML**: Training data for predictive features
+- **Predictions**: Training data for restock predictions
+
+### 3.3 routines & routine_logs Tables (Phase 4)
+
+```sql
+CREATE TABLE routines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    medicine_id INTEGER REFERENCES medicines(id) ON DELETE SET NULL,
+    medicine_name TEXT NOT NULL COLLATE NOCASE,
+    dosage_quantity INTEGER DEFAULT 1,
+    dosage_unit TEXT DEFAULT 'tablet',
+    frequency TEXT DEFAULT 'daily',          -- daily/weekly/every_other_day/custom
+    times_of_day TEXT NOT NULL DEFAULT '["08:00"]',  -- JSON array
+    days_of_week TEXT,                       -- JSON array (for weekly)
+    meal_relation TEXT,                      -- before_meal/after_meal/with_meal
+    status TEXT DEFAULT 'active',            -- active/paused/completed
+    created_by_user_id INTEGER NOT NULL,
+    group_chat_id INTEGER NOT NULL,
+    ...
+);
+```
+
+### 3.4 drug_interactions Table (Phase 4)
+
+```sql
+CREATE TABLE drug_interactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    drug_a_name TEXT NOT NULL COLLATE NOCASE,
+    drug_b_name TEXT NOT NULL COLLATE NOCASE,
+    severity TEXT NOT NULL,                  -- mild/moderate/severe/contraindicated
+    description TEXT,
+    source TEXT,
+    UNIQUE(drug_a_name, drug_b_name)
+);
+```
+
+### 3.5 medicine_costs Table (Phase 5)
+
+```sql
+CREATE TABLE medicine_costs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    medicine_id INTEGER NOT NULL REFERENCES medicines(id) ON DELETE CASCADE,
+    total_cost REAL NOT NULL,
+    currency TEXT DEFAULT 'BDT',
+    purchase_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER NOT NULL,
+    group_chat_id INTEGER NOT NULL,
+    ...
+);
+```
 
 ## 4. Scalability Considerations
 
@@ -222,46 +302,41 @@ CREATE TABLE activity_log (
 - Queue system (Celery + Redis) for background jobs
 - Load balancer for multiple bot instances
 
-## 5. Future LLM Integration Plan
+## 5. LLM Integration (Implemented)
 
-### 5.1 MCP Integration
+### 5.1 Provider Factory Pattern
 
 ```python
-from mcp import Tool, Server
+# Providers self-register on import
+LLMProviderFactory.register("groq", GroqProvider)
 
-@Tool
-async def extract_medicine_info(text: str, image: bytes = None) -> MedicineData:
-    """Use Claude API with vision for prescription photos."""
-    response = await claude_api.messages.create(
-        model="claude-opus-4-5",
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "text", "text": text},
-                {"type": "image", "source": {"type": "base64", "data": image}}
-            ]
-        }],
-        tools=[medicine_extraction_tool],
-    )
-    return response.tool_use.input
+# Create from config (returns None if disabled)
+provider = LLMProviderFactory.from_config(settings)
+
+# Use for completions with tool calling
+response = await provider.complete(messages, tools=[MEDICINE_EXTRACTION_TOOL])
 ```
 
-### 5.2 RAG Pipeline for Drug Interactions
+### 5.2 Vision Processing Pipeline
 
 ```
-User Query → Embed Query → Vector Search (ChromaDB)
-                                    ↓
-                          Retrieve Drug Info
-                                    ↓
-                         Context + Query → Claude
-                                    ↓
-                            Interaction Warning
+Photo Message → Base64 encode → Vision LLM (Groq llama-3.2-90b-vision)
+                                        ↓
+                              Extract medicine info
+                                        ↓
+                              Confirm with user → Add to inventory
 ```
 
-**Data Sources:**
-- FDA drug interaction database
-- WHO essential medicines list
-- Bangladesh-specific medicine data
+### 5.3 Drug Interaction Checking
+
+```
+Add Medicine → Check against cabinet → Query drug_interactions table
+                                              ↓
+                                    Display severity warnings
+                                    (mild/moderate/severe/contraindicated)
+```
+
+**Data**: 30 pre-seeded interaction pairs for common BD medicines in `data/drug_interactions.json`.
 
 ## 6. Security Considerations
 
@@ -445,10 +520,12 @@ candidates = [m for m in medicines if m.name[0].lower() == first_letter]
 ## Summary
 
 The Medi-Cabinet Bot demonstrates:
-- **Clean Architecture**: Layered design with clear separation of concerns
-- **Practical Problem-Solving**: Solves real-world medicine waste issue
-- **Extensibility**: Ready for Phase 2 LLM integration
-- **Production-Ready**: Error handling, logging, testing, deployment
-- **User-Centric**: Natural language interface, zero friction
+- **Clean Architecture**: Layered design with clear separation of concerns (Bot → Commands → Services → Repositories)
+- **Practical Problem-Solving**: Solves real-world medicine waste issue for Bangladeshi families
+- **Pluggable LLM Integration**: Factory pattern with registry for multiple providers
+- **Multi-Tier NLU**: Regex (free/fast) + LLM fallback (when configured)
+- **Smart Features**: Drug interactions, routine scheduling, cost tracking, analytics
+- **Production-Ready**: 170 tests, Alembic migrations, Docker deployment, structured logging
+- **User-Centric**: Natural language interface, photo recognition, inline keyboards
 
-This architecture balances simplicity (for maintainability) with sophistication (for future enhancements), making it an excellent portfolio project and practical family tool.
+This architecture balances simplicity (for maintainability) with sophistication (for real-world use), making it both a strong portfolio project and a practical family tool.
