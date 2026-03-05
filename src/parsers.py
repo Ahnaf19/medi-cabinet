@@ -98,12 +98,12 @@ class AddCommandParser:
 
     # Regex patterns for add commands (in priority order)
     PATTERNS = [
-        # +Napa 10
-        r"^\+\s*(\w+(?:\s+\w+)?)\s+(\d+)",
+        # +Napa 10 caps / +Napa 10
+        r"^\+\s*(\w+(?:\s+\w+)?)\s+(\d+)(?:\s+(\w+))?",
         # Bought/Got Napa Extra 10 tablets
         r"(?:bought|got|purchase[d]?|add(?:ed)?)\s+(\w+(?:\s+\w+)?)[,]?\s*(\d+)(?:\s+(\w+))?",
-        # 10 Napa (quantity first)
-        r"^(\d+)\s+(\w+(?:\s+\w+)?)",
+        # 10 Napa caps (quantity first)
+        r"^(\d+)\s+(\w+(?:\s+\w+)?)(?:\s+(\w+))?",
         # Got paracetamol (no quantity)
         r"(?:bought|got|purchase[d]?|add(?:ed)?)\s+(\w+(?:\s+\w+)?)",
     ]
@@ -159,15 +159,15 @@ class AddCommandParser:
 
                 # Extract medicine name and quantity based on pattern
                 if text_lower.startswith("+"):
-                    # Pattern: +Napa 10
+                    # Pattern: +Napa 10 caps
                     medicine_name = groups[0]
                     quantity = int(groups[1])
-                    unit = "tablets"
+                    unit = groups[2] if len(groups) > 2 and groups[2] else "tablets"
                 elif text_lower[0].isdigit():
-                    # Pattern: 10 Napa (quantity first)
+                    # Pattern: 10 Napa caps (quantity first)
                     quantity = int(groups[0])
                     medicine_name = groups[1]
-                    unit = "tablets"
+                    unit = groups[2] if len(groups) > 2 and groups[2] else "tablets"
                 elif len(groups) >= 2 and groups[1]:
                     # Pattern: Bought Napa 10
                     medicine_name = groups[0]

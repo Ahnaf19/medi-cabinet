@@ -534,7 +534,7 @@ class ActivityLogRepository:
             """
             SELECT * FROM activity_log
             WHERE medicine_id = ?
-            ORDER BY timestamp DESC
+            ORDER BY timestamp DESC, id DESC
             LIMIT ?
             """,
             (medicine_id, limit),
