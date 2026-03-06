@@ -1,6 +1,6 @@
 """Configuration management using Pydantic Settings."""
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -58,6 +58,39 @@ class Settings(BaseSettings):
         ge=0,
         le=100,
         description="Fuzzy matching threshold for medicine names (0-100)",
+    )
+
+    # LLM Configuration (Phase 2)
+    llm_provider: Optional[str] = Field(
+        default=None,
+        description="LLM provider: 'groq', 'openai', 'anthropic', or None (disabled)",
+    )
+    llm_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for the LLM provider",
+    )
+    llm_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="LLM model name (default: Groq's llama-3.3-70b-versatile)",
+    )
+    llm_temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature for completions",
+    )
+
+    # Cost Tracking Configuration (Phase 5)
+    default_currency: str = Field(
+        default="BDT",
+        description="Default currency for cost tracking",
+    )
+
+    # Conversation Context
+    conversation_context_ttl_minutes: int = Field(
+        default=10,
+        ge=1,
+        description="Minutes before conversation context expires",
     )
 
     @field_validator("admin_user_ids", mode="before")

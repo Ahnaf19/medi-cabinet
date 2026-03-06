@@ -1,9 +1,11 @@
 """Database operations using repository pattern with async SQLite."""
 
-import aiosqlite
+import json
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict, Any
+from typing import Any
+
+import aiosqlite
 from fuzzywuzzy import fuzz
 
 
@@ -15,8 +17,8 @@ class Medicine:
     name: str
     quantity: int
     unit: str
-    expiry_date: Optional[datetime]
-    location: Optional[str]
+    expiry_date: datetime | None
+    location: str | None
     added_by_user_id: int
     added_by_username: str
     added_date: datetime
@@ -31,7 +33,7 @@ class Activity:
     id: int
     medicine_id: int
     action: str
-    quantity_change: Optional[int]
+    quantity_change: int | None
     user_id: int
     username: str
     timestamp: datetime
@@ -45,8 +47,8 @@ class MedicineData:
     name: str
     quantity: int
     unit: str
-    expiry_date: Optional[datetime]
-    location: Optional[str]
+    expiry_date: datetime | None
+    location: str | None
     added_by_user_id: int
     added_by_username: str
     group_chat_id: int
@@ -77,7 +79,7 @@ class Database:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
-        self.conn: Optional[aiosqlite.Connection] = None
+        self.conn: aiosqlite.Connection | None = None
 
     async def __aenter__(self):
         """Open database connection."""
@@ -108,7 +110,7 @@ class Database:
         await self.conn.commit()
         return cursor
 
-    async def fetch_one(self, query: str, params: tuple = ()) -> Optional[aiosqlite.Row]:
+    async def fetch_one(self, query: str, params: tuple = ()) -> aiosqlite.Row | None:
         """Fetch one row from database.
 
         Args:
@@ -123,7 +125,7 @@ class Database:
         cursor = await self.conn.execute(query, params)
         return await cursor.fetchone()
 
-    async def fetch_all(self, query: str, params: tuple = ()) -> List[aiosqlite.Row]:
+    async def fetch_all(self, query: str, params: tuple = ()) -> list[aiosqlite.Row]:
         """Fetch all rows from database.
 
         Args:
@@ -285,7 +287,7 @@ class MedicineRepository:
 
         return self._row_to_medicine(updated_row)
 
-    async def find_by_exact_name(self, name: str, group_chat_id: int) -> Optional[Medicine]:
+    async def find_by_exact_name(self, name: str, group_chat_id: int) -> Medicine | None:
         """Find medicine by exact name (case-insensitive).
 
         Args:
@@ -307,7 +309,7 @@ class MedicineRepository:
 
     async def find_by_name_fuzzy(
         self, name: str, group_chat_id: int, threshold: int = 80
-    ) -> List[Tuple[Medicine, int]]:
+    ) -> list[tuple[Medicine, int]]:
         """Find medicines by fuzzy name matching.
 
         Args:
@@ -324,7 +326,7 @@ class MedicineRepository:
         )
 
         # Calculate fuzzy match scores
-        matches: List[Tuple[Medicine, int]] = []
+        matches: list[tuple[Medicine, int]] = []
         for row in rows:
             medicine = self._row_to_medicine(row)
             score = fuzz.ratio(name.lower(), medicine.name.lower())
@@ -337,7 +339,7 @@ class MedicineRepository:
 
         return matches
 
-    async def get_by_id(self, medicine_id: int, group_chat_id: int) -> Optional[Medicine]:
+    async def get_by_id(self, medicine_id: int, group_chat_id: int) -> Medicine | None:
         """Get medicine by ID with group isolation.
 
         Args:
@@ -357,7 +359,7 @@ class MedicineRepository:
 
         return self._row_to_medicine(row) if row else None
 
-    async def get_all(self, group_chat_id: int) -> List[Medicine]:
+    async def get_all(self, group_chat_id: int) -> list[Medicine]:
         """Get all medicines for a group.
 
         Args:
@@ -377,7 +379,7 @@ class MedicineRepository:
 
         return [self._row_to_medicine(row) for row in rows]
 
-    async def get_low_stock(self, group_chat_id: int, threshold: int = 3) -> List[Medicine]:
+    async def get_low_stock(self, group_chat_id: int, threshold: int = 3) -> list[Medicine]:
         """Get medicines with low stock.
 
         Args:
@@ -398,7 +400,7 @@ class MedicineRepository:
 
         return [self._row_to_medicine(row) for row in rows]
 
-    async def get_expiring_soon(self, group_chat_id: int, days: int = 30) -> List[Medicine]:
+    async def get_expiring_soon(self, group_chat_id: int, days: int = 30) -> list[Medicine]:
         """Get medicines expiring within specified days.
 
         Args:
@@ -483,7 +485,7 @@ class ActivityLogRepository:
         user_id: int,
         username: str,
         group_chat_id: int,
-        quantity_change: Optional[int] = None,
+        quantity_change: int | None = None,
     ) -> Activity:
         """Log an activity.
 
@@ -519,7 +521,7 @@ class ActivityLogRepository:
 
         return self._row_to_activity(row)
 
-    async def get_history(self, medicine_id: int, limit: int = 50) -> List[Activity]:
+    async def get_history(self, medicine_id: int, limit: int = 50) -> list[Activity]:
         """Get activity history for a medicine.
 
         Args:
@@ -533,7 +535,7 @@ class ActivityLogRepository:
             """
             SELECT * FROM activity_log
             WHERE medicine_id = ?
-            ORDER BY timestamp DESC
+            ORDER BY timestamp DESC, id DESC
             LIMIT ?
             """,
             (medicine_id, limit),
@@ -541,7 +543,7 @@ class ActivityLogRepository:
 
         return [self._row_to_activity(row) for row in rows]
 
-    async def get_stats(self, group_chat_id: int, days: int = 30) -> Dict[str, Any]:
+    async def get_stats(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
         """Get usage statistics for a group.
 
         Args:
@@ -610,5 +612,529 @@ class ActivityLogRepository:
             "most_used_medicines": [
                 {"name": row["name"], "usage_count": row["usage_count"]} for row in medicine_rows
             ],
+            "period_days": days,
+        }
+
+
+# --- Phase 4: Routine entities ---
+
+
+@dataclass
+class Routine:
+    """Routine entity."""
+
+    id: int
+    medicine_id: int | None
+    medicine_name: str
+    dosage_quantity: int
+    dosage_unit: str
+    frequency: str
+    times_of_day: list[str]
+    days_of_week: list[str] | None
+    meal_relation: str | None
+    status: str
+    notes: str | None
+    created_by_user_id: int
+    created_by_username: str
+    group_chat_id: int
+    created_at: datetime
+    updated_at: datetime
+    start_date: datetime | None
+    end_date: datetime | None
+
+
+@dataclass
+class RoutineLog:
+    """Routine log entry."""
+
+    id: int
+    routine_id: int
+    scheduled_time: datetime
+    actual_time: datetime | None
+    status: str
+    group_chat_id: int
+    created_at: datetime
+
+
+@dataclass
+class RoutineData:
+    """DTO for creating routines."""
+
+    medicine_name: str
+    dosage_quantity: int = 1
+    dosage_unit: str = "tablets"
+    frequency: str = "daily"
+    times_of_day: list[str] = field(default_factory=lambda: ["08:00"])
+    days_of_week: list[str] | None = None
+    meal_relation: str | None = None
+    notes: str | None = None
+    created_by_user_id: int = 0
+    created_by_username: str = ""
+    group_chat_id: int = 0
+    medicine_id: int | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+
+
+@dataclass
+class DrugInteraction:
+    """Drug interaction entity."""
+
+    id: int
+    drug_a_name: str
+    drug_b_name: str
+    severity: str
+    description: str
+    source: str | None
+
+
+@dataclass
+class MedicineCost:
+    """Medicine cost entity."""
+
+    id: int
+    medicine_id: int
+    cost_per_unit: float | None
+    currency: str
+    purchase_date: datetime | None
+    total_quantity: int | None
+    total_cost: float
+    user_id: int
+    username: str
+    group_chat_id: int
+    created_at: datetime
+
+
+@dataclass
+class CostData:
+    """DTO for adding cost entries."""
+
+    medicine_id: int
+    total_cost: float
+    user_id: int
+    username: str
+    group_chat_id: int
+    currency: str = "BDT"
+    cost_per_unit: float | None = None
+    total_quantity: int | None = None
+    purchase_date: datetime | None = None
+
+
+class RoutineRepository:
+    """Repository for routine CRUD operations."""
+
+    def __init__(self, db: Database):
+        self.db = db
+
+    @staticmethod
+    def _row_to_routine(row: aiosqlite.Row) -> Routine:
+        """Convert database row to Routine entity."""
+        return Routine(
+            id=row["id"],
+            medicine_id=row["medicine_id"],
+            medicine_name=row["medicine_name"],
+            dosage_quantity=row["dosage_quantity"],
+            dosage_unit=row["dosage_unit"],
+            frequency=row["frequency"],
+            times_of_day=json.loads(row["times_of_day"]),
+            days_of_week=json.loads(row["days_of_week"]) if row["days_of_week"] else None,
+            meal_relation=row["meal_relation"],
+            status=row["status"],
+            notes=row["notes"],
+            created_by_user_id=row["created_by_user_id"],
+            created_by_username=row["created_by_username"],
+            group_chat_id=row["group_chat_id"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+            start_date=(datetime.fromisoformat(row["start_date"]) if row["start_date"] else None),
+            end_date=datetime.fromisoformat(row["end_date"]) if row["end_date"] else None,
+        )
+
+    async def create(self, data: RoutineData) -> Routine:
+        """Create a new routine."""
+        cursor = await self.db.execute(
+            """
+            INSERT INTO routines (
+                medicine_id, medicine_name, dosage_quantity, dosage_unit,
+                frequency, times_of_day, days_of_week, meal_relation,
+                notes, created_by_user_id, created_by_username, group_chat_id,
+                start_date, end_date
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.medicine_id,
+                data.medicine_name,
+                data.dosage_quantity,
+                data.dosage_unit,
+                data.frequency,
+                json.dumps(data.times_of_day),
+                json.dumps(data.days_of_week) if data.days_of_week else None,
+                data.meal_relation,
+                data.notes,
+                data.created_by_user_id,
+                data.created_by_username,
+                data.group_chat_id,
+                data.start_date,
+                data.end_date,
+            ),
+        )
+        row = await self.db.fetch_one("SELECT * FROM routines WHERE id = ?", (cursor.lastrowid,))
+        if not row:
+            raise DatabaseError("Failed to create routine")
+        return self._row_to_routine(row)
+
+    async def get_by_id(self, routine_id: int) -> Routine | None:
+        """Get routine by ID."""
+        row = await self.db.fetch_one("SELECT * FROM routines WHERE id = ?", (routine_id,))
+        return self._row_to_routine(row) if row else None
+
+    async def get_active_routines(self, group_chat_id: int | None = None) -> list[Routine]:
+        """Get all active routines, optionally filtered by group."""
+        if group_chat_id is not None:
+            rows = await self.db.fetch_all(
+                "SELECT * FROM routines WHERE status = 'active' AND group_chat_id = ? ORDER BY medicine_name",
+                (group_chat_id,),
+            )
+        else:
+            rows = await self.db.fetch_all(
+                "SELECT * FROM routines WHERE status = 'active' ORDER BY medicine_name"
+            )
+        return [self._row_to_routine(row) for row in rows]
+
+    async def get_user_routines(self, user_id: int, group_chat_id: int) -> list[Routine]:
+        """Get routines created by a specific user in a group."""
+        rows = await self.db.fetch_all(
+            """
+            SELECT * FROM routines
+            WHERE created_by_user_id = ? AND group_chat_id = ?
+            ORDER BY status, medicine_name
+            """,
+            (user_id, group_chat_id),
+        )
+        return [self._row_to_routine(row) for row in rows]
+
+    async def update_status(self, routine_id: int, status: str) -> Routine | None:
+        """Update routine status (active/paused/completed)."""
+        await self.db.execute(
+            "UPDATE routines SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (status, routine_id),
+        )
+        return await self.get_by_id(routine_id)
+
+    async def delete(self, routine_id: int) -> bool:
+        """Delete a routine."""
+        cursor = await self.db.execute("DELETE FROM routines WHERE id = ?", (routine_id,))
+        return cursor.rowcount > 0
+
+    async def link_medicine(self, routine_id: int, medicine_id: int) -> None:
+        """Link a routine to a medicine inventory entry."""
+        await self.db.execute(
+            "UPDATE routines SET medicine_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (medicine_id, routine_id),
+        )
+
+
+class RoutineLogRepository:
+    """Repository for routine log operations."""
+
+    def __init__(self, db: Database):
+        self.db = db
+
+    @staticmethod
+    def _row_to_log(row: aiosqlite.Row) -> RoutineLog:
+        return RoutineLog(
+            id=row["id"],
+            routine_id=row["routine_id"],
+            scheduled_time=datetime.fromisoformat(row["scheduled_time"]),
+            actual_time=(
+                datetime.fromisoformat(row["actual_time"]) if row["actual_time"] else None
+            ),
+            status=row["status"],
+            group_chat_id=row["group_chat_id"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
+
+    async def create_log(
+        self, routine_id: int, scheduled_time: datetime, group_chat_id: int
+    ) -> RoutineLog:
+        """Create a pending log entry for a scheduled reminder."""
+        cursor = await self.db.execute(
+            """
+            INSERT INTO routine_logs (routine_id, scheduled_time, status, group_chat_id)
+            VALUES (?, ?, 'pending', ?)
+            """,
+            (routine_id, scheduled_time.isoformat(), group_chat_id),
+        )
+        row = await self.db.fetch_one(
+            "SELECT * FROM routine_logs WHERE id = ?", (cursor.lastrowid,)
+        )
+        if not row:
+            raise DatabaseError("Failed to create routine log")
+        return self._row_to_log(row)
+
+    async def mark_taken(self, log_id: int) -> RoutineLog | None:
+        """Mark a routine log as taken."""
+        await self.db.execute(
+            "UPDATE routine_logs SET status = 'taken', actual_time = CURRENT_TIMESTAMP WHERE id = ?",
+            (log_id,),
+        )
+        row = await self.db.fetch_one("SELECT * FROM routine_logs WHERE id = ?", (log_id,))
+        return self._row_to_log(row) if row else None
+
+    async def mark_missed(self, log_id: int) -> None:
+        """Mark a routine log as missed."""
+        await self.db.execute("UPDATE routine_logs SET status = 'missed' WHERE id = ?", (log_id,))
+
+    async def mark_skipped(self, log_id: int) -> None:
+        """Mark a routine log as skipped."""
+        await self.db.execute("UPDATE routine_logs SET status = 'skipped' WHERE id = ?", (log_id,))
+
+    async def mark_old_pending_as_missed(self, routine_id: int) -> int:
+        """Mark old pending logs as missed (before creating new ones)."""
+        cursor = await self.db.execute(
+            """
+            UPDATE routine_logs
+            SET status = 'missed'
+            WHERE routine_id = ? AND status = 'pending'
+              AND scheduled_time < datetime('now', '-1 hour')
+            """,
+            (routine_id,),
+        )
+        return cursor.rowcount
+
+    async def get_pending_log(self, routine_id: int) -> RoutineLog | None:
+        """Get the most recent pending log for a routine."""
+        row = await self.db.fetch_one(
+            """
+            SELECT * FROM routine_logs
+            WHERE routine_id = ? AND status = 'pending'
+            ORDER BY scheduled_time DESC
+            LIMIT 1
+            """,
+            (routine_id,),
+        )
+        return self._row_to_log(row) if row else None
+
+    async def get_adherence_stats(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
+        """Get adherence statistics for routines in a group."""
+        cutoff = datetime.now() - timedelta(days=days)
+
+        total_row = await self.db.fetch_one(
+            """
+            SELECT COUNT(*) as total FROM routine_logs
+            WHERE group_chat_id = ? AND scheduled_time >= ?
+            """,
+            (group_chat_id, cutoff.isoformat()),
+        )
+
+        status_rows = await self.db.fetch_all(
+            """
+            SELECT status, COUNT(*) as count FROM routine_logs
+            WHERE group_chat_id = ? AND scheduled_time >= ?
+            GROUP BY status
+            """,
+            (group_chat_id, cutoff.isoformat()),
+        )
+
+        total = total_row["total"] if total_row else 0
+        by_status = {row["status"]: row["count"] for row in status_rows}
+        taken = by_status.get("taken", 0)
+        adherence_rate = (taken / total * 100) if total > 0 else 0.0
+
+        return {
+            "total": total,
+            "by_status": by_status,
+            "adherence_rate": round(adherence_rate, 1),
+            "period_days": days,
+        }
+
+
+class DrugInteractionRepository:
+    """Repository for drug interaction checking."""
+
+    def __init__(self, db: Database):
+        self.db = db
+
+    @staticmethod
+    def _row_to_interaction(row: aiosqlite.Row) -> DrugInteraction:
+        return DrugInteraction(
+            id=row["id"],
+            drug_a_name=row["drug_a_name"],
+            drug_b_name=row["drug_b_name"],
+            severity=row["severity"],
+            description=row["description"],
+            source=row["source"],
+        )
+
+    async def check_interaction(self, drug_a: str, drug_b: str) -> DrugInteraction | None:
+        """Check if two drugs have a known interaction."""
+        row = await self.db.fetch_one(
+            """
+            SELECT * FROM drug_interactions
+            WHERE (LOWER(drug_a_name) = LOWER(?) AND LOWER(drug_b_name) = LOWER(?))
+               OR (LOWER(drug_a_name) = LOWER(?) AND LOWER(drug_b_name) = LOWER(?))
+            """,
+            (drug_a, drug_b, drug_b, drug_a),
+        )
+        return self._row_to_interaction(row) if row else None
+
+    async def check_against_cabinet(
+        self, drug_name: str, group_chat_id: int
+    ) -> list[DrugInteraction]:
+        """Check a drug against all medicines in the cabinet."""
+        rows = await self.db.fetch_all(
+            """
+            SELECT di.* FROM drug_interactions di
+            JOIN medicines m ON (
+                LOWER(m.name) = LOWER(di.drug_a_name)
+                OR LOWER(m.name) = LOWER(di.drug_b_name)
+            )
+            WHERE m.group_chat_id = ?
+              AND m.quantity > 0
+              AND (LOWER(di.drug_a_name) = LOWER(?) OR LOWER(di.drug_b_name) = LOWER(?))
+            """,
+            (group_chat_id, drug_name, drug_name),
+        )
+        return [self._row_to_interaction(row) for row in rows]
+
+    async def seed_interactions(self, interactions: list[dict[str, str]]) -> int:
+        """Seed the database with known drug interactions.
+
+        Args:
+            interactions: List of dicts with keys: drug_a, drug_b, severity, description, source
+
+        Returns:
+            Number of interactions inserted
+        """
+        count = 0
+        for item in interactions:
+            try:
+                await self.db.execute(
+                    """
+                    INSERT OR IGNORE INTO drug_interactions
+                        (drug_a_name, drug_b_name, severity, description, source)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        item["drug_a"],
+                        item["drug_b"],
+                        item["severity"],
+                        item["description"],
+                        item.get("source", ""),
+                    ),
+                )
+                count += 1
+            except Exception:
+                continue
+        return count
+
+
+class CostRepository:
+    """Repository for medicine cost tracking."""
+
+    def __init__(self, db: Database):
+        self.db = db
+
+    @staticmethod
+    def _row_to_cost(row: aiosqlite.Row) -> MedicineCost:
+        return MedicineCost(
+            id=row["id"],
+            medicine_id=row["medicine_id"],
+            cost_per_unit=row["cost_per_unit"],
+            currency=row["currency"],
+            purchase_date=(
+                datetime.fromisoformat(row["purchase_date"]) if row["purchase_date"] else None
+            ),
+            total_quantity=row["total_quantity"],
+            total_cost=row["total_cost"],
+            user_id=row["user_id"],
+            username=row["username"],
+            group_chat_id=row["group_chat_id"],
+            created_at=datetime.fromisoformat(row["created_at"]),
+        )
+
+    async def add_cost(self, data: CostData) -> MedicineCost:
+        """Add a cost entry for a medicine."""
+        cursor = await self.db.execute(
+            """
+            INSERT INTO medicine_costs (
+                medicine_id, cost_per_unit, currency, purchase_date,
+                total_quantity, total_cost, user_id, username, group_chat_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.medicine_id,
+                data.cost_per_unit,
+                data.currency,
+                data.purchase_date,
+                data.total_quantity,
+                data.total_cost,
+                data.user_id,
+                data.username,
+                data.group_chat_id,
+            ),
+        )
+        row = await self.db.fetch_one(
+            "SELECT * FROM medicine_costs WHERE id = ?", (cursor.lastrowid,)
+        )
+        if not row:
+            raise DatabaseError("Failed to create cost entry")
+        return self._row_to_cost(row)
+
+    async def get_total_spent(self, group_chat_id: int, days: int | None = None) -> float:
+        """Get total amount spent on medicines."""
+        if days:
+            cutoff = datetime.now() - timedelta(days=days)
+            row = await self.db.fetch_one(
+                """
+                SELECT COALESCE(SUM(total_cost), 0) as total
+                FROM medicine_costs
+                WHERE group_chat_id = ? AND created_at >= ?
+                """,
+                (group_chat_id, cutoff.isoformat()),
+            )
+        else:
+            row = await self.db.fetch_one(
+                """
+                SELECT COALESCE(SUM(total_cost), 0) as total
+                FROM medicine_costs
+                WHERE group_chat_id = ?
+                """,
+                (group_chat_id,),
+            )
+        return float(row["total"]) if row else 0.0
+
+    async def get_cost_summary(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
+        """Get cost summary grouped by medicine."""
+        cutoff = datetime.now() - timedelta(days=days)
+
+        rows = await self.db.fetch_all(
+            """
+            SELECT m.name, SUM(mc.total_cost) as total, mc.currency,
+                   COUNT(mc.id) as purchases
+            FROM medicine_costs mc
+            JOIN medicines m ON mc.medicine_id = m.id
+            WHERE mc.group_chat_id = ? AND mc.created_at >= ?
+            GROUP BY m.name, mc.currency
+            ORDER BY total DESC
+            """,
+            (group_chat_id, cutoff.isoformat()),
+        )
+
+        total_spent = sum(row["total"] for row in rows)
+
+        return {
+            "by_medicine": [
+                {
+                    "name": row["name"],
+                    "total_cost": row["total"],
+                    "currency": row["currency"],
+                    "purchases": row["purchases"],
+                }
+                for row in rows
+            ],
+            "total_spent": total_spent,
             "period_days": days,
         }

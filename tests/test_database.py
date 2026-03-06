@@ -1,12 +1,12 @@
 """Tests for database operations."""
 
-import pytest
 from datetime import datetime, timedelta
 
+import pytest
+
 from src.database import (
-    MedicineData,
     InsufficientStockError,
-    DatabaseError,
+    MedicineData,
 )
 
 

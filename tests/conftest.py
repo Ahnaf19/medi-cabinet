@@ -1,12 +1,22 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 import asyncio
-from datetime import datetime
-from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from config.config import Settings
-from src.database import Database, MedicineRepository, ActivityLogRepository, MedicineData
+from src.database import (
+    ActivityLogRepository,
+    CostRepository,
+    Database,
+    DrugInteractionRepository,
+    MedicineData,
+    MedicineRepository,
+    RoutineData,
+    RoutineLogRepository,
+    RoutineRepository,
+)
 
 
 @pytest.fixture(scope="session")
@@ -88,6 +98,84 @@ async def test_db():
         """
         )
 
+        # Phase 4: Routines tables
+        await db.execute(
+            """
+            CREATE TABLE routines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                medicine_id INTEGER NULL,
+                medicine_name TEXT NOT NULL COLLATE NOCASE,
+                dosage_quantity INTEGER NOT NULL DEFAULT 1,
+                dosage_unit TEXT NOT NULL DEFAULT 'tablets',
+                frequency TEXT NOT NULL DEFAULT 'daily',
+                times_of_day TEXT NOT NULL DEFAULT '["08:00"]',
+                days_of_week TEXT NULL,
+                meal_relation TEXT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                notes TEXT NULL,
+                created_by_user_id INTEGER NOT NULL,
+                created_by_username TEXT NOT NULL,
+                group_chat_id INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                start_date DATE NULL,
+                end_date DATE NULL,
+                FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE SET NULL
+            )
+        """
+        )
+
+        await db.execute(
+            """
+            CREATE TABLE routine_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                routine_id INTEGER NOT NULL,
+                scheduled_time TIMESTAMP NOT NULL,
+                actual_time TIMESTAMP NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                group_chat_id INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (routine_id) REFERENCES routines(id) ON DELETE CASCADE
+            )
+        """
+        )
+
+        # Phase 4: Drug interactions table
+        await db.execute(
+            """
+            CREATE TABLE drug_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                drug_a_name TEXT NOT NULL COLLATE NOCASE,
+                drug_b_name TEXT NOT NULL COLLATE NOCASE,
+                severity TEXT NOT NULL DEFAULT 'mild',
+                description TEXT NOT NULL,
+                source TEXT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(drug_a_name, drug_b_name)
+            )
+        """
+        )
+
+        # Phase 5: Cost tracking table
+        await db.execute(
+            """
+            CREATE TABLE medicine_costs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                medicine_id INTEGER NOT NULL,
+                cost_per_unit REAL NULL,
+                currency TEXT NOT NULL DEFAULT 'BDT',
+                purchase_date DATE NULL,
+                total_quantity INTEGER NULL,
+                total_cost REAL NOT NULL,
+                user_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                group_chat_id INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (medicine_id) REFERENCES medicines(id) ON DELETE CASCADE
+            )
+        """
+        )
+
         yield db
 
 
@@ -141,3 +229,71 @@ def sample_medicines_list():
             "group_chat_id": 789012,
         },
     ]
+
+
+@pytest.fixture
+async def routine_repo(test_db):
+    """Create routine repository."""
+    return RoutineRepository(test_db)
+
+
+@pytest.fixture
+async def routine_log_repo(test_db):
+    """Create routine log repository."""
+    return RoutineLogRepository(test_db)
+
+
+@pytest.fixture
+async def interaction_repo(test_db):
+    """Create drug interaction repository."""
+    return DrugInteractionRepository(test_db)
+
+
+@pytest.fixture
+async def cost_repo(test_db):
+    """Create cost repository."""
+    return CostRepository(test_db)
+
+
+@pytest.fixture
+def sample_routine_data():
+    """Create sample routine data."""
+    return RoutineData(
+        medicine_name="Napa",
+        dosage_quantity=1,
+        dosage_unit="tablets",
+        frequency="daily",
+        times_of_day=["08:00", "20:00"],
+        meal_relation="after_meal",
+        created_by_user_id=123456,
+        created_by_username="TestUser",
+        group_chat_id=789012,
+    )
+
+
+@pytest.fixture
+def mock_update():
+    """Create a mock Telegram Update for handler tests."""
+    update = AsyncMock()
+    update.effective_user = MagicMock()
+    update.effective_user.id = 123456
+    update.effective_user.first_name = "TestUser"
+    update.effective_chat = MagicMock()
+    update.effective_chat.id = 789012
+    update.message = AsyncMock()
+    update.message.text = ""
+    update.message.reply_text = AsyncMock()
+    update.effective_message = update.message
+    return update
+
+
+@pytest.fixture
+def mock_context(test_config):
+    """Create a mock Telegram Context for handler tests."""
+    context = MagicMock()
+    context.bot_data = {
+        "config": test_config,
+    }
+    context.bot = AsyncMock()
+    context.args = []
+    return context

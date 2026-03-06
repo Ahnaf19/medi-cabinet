@@ -1,0 +1,219 @@
+[
+  {
+    "drug_a": "Napa",
+    "drug_b": "Warfarin",
+    "severity": "moderate",
+    "description": "Paracetamol may increase the anticoagulant effect of warfarin with prolonged use.",
+    "source": "BNFC/MIMS"
+  },
+  {
+    "drug_a": "Napa",
+    "drug_b": "Alcohol",
+    "severity": "severe",
+    "description": "Increased risk of liver damage when paracetamol is combined with alcohol.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Ace",
+    "drug_b": "Warfarin",
+    "severity": "moderate",
+    "description": "Paracetamol (Ace) may increase anticoagulant effect of warfarin.",
+    "source": "BNFC/MIMS"
+  },
+  {
+    "drug_a": "Sergel",
+    "drug_b": "Clopidogrel",
+    "severity": "severe",
+    "description": "Esomeprazole significantly reduces the antiplatelet effect of clopidogrel.",
+    "source": "FDA Warning"
+  },
+  {
+    "drug_a": "Seclo",
+    "drug_b": "Clopidogrel",
+    "severity": "severe",
+    "description": "Omeprazole significantly reduces the antiplatelet effect of clopidogrel.",
+    "source": "FDA Warning"
+  },
+  {
+    "drug_a": "Maxpro",
+    "drug_b": "Clopidogrel",
+    "severity": "severe",
+    "description": "Esomeprazole (Maxpro) significantly reduces the antiplatelet effect of clopidogrel.",
+    "source": "FDA Warning"
+  },
+  {
+    "drug_a": "Sergel",
+    "drug_b": "Methotrexate",
+    "severity": "severe",
+    "description": "PPIs may increase methotrexate levels by reducing renal clearance.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Alatrol",
+    "drug_b": "Alcohol",
+    "severity": "moderate",
+    "description": "Cetirizine drowsiness is enhanced by alcohol consumption.",
+    "source": "MIMS"
+  },
+  {
+    "drug_a": "Histacin",
+    "drug_b": "Alcohol",
+    "severity": "moderate",
+    "description": "Chlorpheniramine causes significant drowsiness, worsened by alcohol.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Histacin",
+    "drug_b": "Alatrol",
+    "severity": "mild",
+    "description": "Taking two antihistamines together may increase sedation.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Fexo",
+    "drug_b": "Alatrol",
+    "severity": "mild",
+    "description": "Combining two antihistamines is generally unnecessary and may increase side effects.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Zimax",
+    "drug_b": "Warfarin",
+    "severity": "moderate",
+    "description": "Azithromycin may enhance the anticoagulant effect of warfarin.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Zimax",
+    "drug_b": "Napa",
+    "severity": "mild",
+    "description": "Generally safe combination but monitor for increased liver burden.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Amoxil",
+    "drug_b": "Methotrexate",
+    "severity": "severe",
+    "description": "Amoxicillin may reduce renal clearance of methotrexate, increasing toxicity risk.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Amoxil",
+    "drug_b": "Warfarin",
+    "severity": "moderate",
+    "description": "Amoxicillin may enhance the anticoagulant effect of warfarin.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Cef-3",
+    "drug_b": "Warfarin",
+    "severity": "moderate",
+    "description": "Cefixime may enhance the anticoagulant effect of warfarin.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Monas",
+    "drug_b": "Phenobarbital",
+    "severity": "moderate",
+    "description": "Phenobarbital reduces the plasma concentration of montelukast.",
+    "source": "MIMS"
+  },
+  {
+    "drug_a": "Brodil",
+    "drug_b": "Propranolol",
+    "severity": "contraindicated",
+    "description": "Beta-blockers may antagonize the bronchodilator effect of salbutamol. Avoid combination in asthma.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Sergel",
+    "drug_b": "Digoxin",
+    "severity": "moderate",
+    "description": "PPIs may increase digoxin plasma levels by altering gastric pH.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Seclo",
+    "drug_b": "Digoxin",
+    "severity": "moderate",
+    "description": "Omeprazole may increase digoxin plasma levels by altering gastric pH.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Napa",
+    "drug_b": "Ace",
+    "severity": "moderate",
+    "description": "Both are paracetamol brands. Taking together risks accidental overdose.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Napa",
+    "drug_b": "Napa Extra",
+    "severity": "moderate",
+    "description": "Napa Extra contains paracetamol + caffeine. Taking with Napa risks paracetamol overdose.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Sergel",
+    "drug_b": "Seclo",
+    "severity": "mild",
+    "description": "Both are PPIs. Taking two PPIs together provides no additional benefit.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Sergel",
+    "drug_b": "Maxpro",
+    "severity": "mild",
+    "description": "Both are esomeprazole brands. Duplicate therapy provides no benefit.",
+    "source": "Clinical Practice"
+  },
+  {
+    "drug_a": "Losectil",
+    "drug_b": "Clopidogrel",
+    "severity": "severe",
+    "description": "Omeprazole (Losectil) significantly reduces the antiplatelet effect of clopidogrel.",
+    "source": "FDA Warning"
+  },
+  {
+    "drug_a": "Virux",
+    "drug_b": "Probenecid",
+    "severity": "moderate",
+    "description": "Probenecid reduces renal clearance of acyclovir, increasing levels.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Alatrol",
+    "drug_b": "Theophylline",
+    "severity": "mild",
+    "description": "Theophylline may slightly reduce cetirizine clearance.",
+    "source": "MIMS"
+  },
+  {
+    "drug_a": "Fexo",
+    "drug_b": "Ketoconazole",
+    "severity": "moderate",
+    "description": "Ketoconazole increases fexofenadine plasma concentration.",
+    "source": "MIMS"
+  },
+  {
+    "drug_a": "Fexo",
+    "drug_b": "Erythromycin",
+    "severity": "moderate",
+    "description": "Erythromycin increases fexofenadine plasma concentration.",
+    "source": "MIMS"
+  },
+  {
+    "drug_a": "Brodil",
+    "drug_b": "Digoxin",
+    "severity": "moderate",
+    "description": "Salbutamol may reduce serum digoxin levels.",
+    "source": "BNFC"
+  },
+  {
+    "drug_a": "Napa",
+    "drug_b": "Isoniazid",
+    "severity": "severe",
+    "description": "Increased risk of hepatotoxicity when paracetamol is used with isoniazid.",
+    "source": "BNFC"
+  }
+]
