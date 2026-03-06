@@ -2,12 +2,6 @@
 
 import pytest
 
-from src.database import (
-    DrugInteractionRepository,
-    MedicineRepository,
-    MedicineData,
-)
-
 
 class TestDrugInteractionRepository:
     """Test drug interaction repository."""

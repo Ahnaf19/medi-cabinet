@@ -1,100 +1,98 @@
 """Tests for utility functions."""
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock
 
+from src.database import Activity, DrugInteraction, Medicine, Routine
 from src.utils import (
-    format_medicine_list,
-    format_medicine_detail,
-    format_date,
-    parse_date_flexible,
     calculate_days_until_expiry,
-    get_stock_status_emoji,
-    sanitize_medicine_name,
-    generate_usage_stats,
     format_activity_history,
-    format_low_stock_alert,
-    format_expiry_warning,
-    get_welcome_message,
-    get_help_message,
-    format_routine_list,
-    format_routine_detail,
-    format_interaction_warning,
-    format_cost_summary,
     format_adherence_stats,
     format_analytics_report,
+    format_cost_summary,
+    format_date,
+    format_expiry_warning,
+    format_interaction_warning,
+    format_low_stock_alert,
+    format_medicine_detail,
+    format_medicine_list,
+    format_routine_detail,
+    format_routine_list,
+    generate_usage_stats,
+    get_help_message,
+    get_stock_status_emoji,
+    get_welcome_message,
+    parse_date_flexible,
+    sanitize_medicine_name,
 )
-from src.database import Medicine, Activity, Routine, DrugInteraction
 
 
 def _make_medicine(**kwargs):
-    defaults = dict(
-        id=1,
-        name="Napa",
-        quantity=10,
-        unit="tablets",
-        expiry_date=None,
-        location=None,
-        added_by_user_id=123,
-        added_by_username="TestUser",
-        added_date=datetime.now(),
-        group_chat_id=-100,
-        last_updated=datetime.now(),
-    )
+    defaults = {
+        "id": 1,
+        "name": "Napa",
+        "quantity": 10,
+        "unit": "tablets",
+        "expiry_date": None,
+        "location": None,
+        "added_by_user_id": 123,
+        "added_by_username": "TestUser",
+        "added_date": datetime.now(),
+        "group_chat_id": -100,
+        "last_updated": datetime.now(),
+    }
     defaults.update(kwargs)
     return Medicine(**defaults)
 
 
 def _make_activity(**kwargs):
-    defaults = dict(
-        id=1,
-        medicine_id=1,
-        action="added",
-        quantity_change=10,
-        user_id=123,
-        username="TestUser",
-        timestamp=datetime.now(),
-        group_chat_id=-100,
-    )
+    defaults = {
+        "id": 1,
+        "medicine_id": 1,
+        "action": "added",
+        "quantity_change": 10,
+        "user_id": 123,
+        "username": "TestUser",
+        "timestamp": datetime.now(),
+        "group_chat_id": -100,
+    }
     defaults.update(kwargs)
     return Activity(**defaults)
 
 
 def _make_routine(**kwargs):
-    defaults = dict(
-        id=1,
-        medicine_id=None,
-        medicine_name="Napa",
-        dosage_quantity=1,
-        dosage_unit="tablet",
-        frequency="daily",
-        times_of_day=["08:00", "20:00"],
-        days_of_week=None,
-        meal_relation="after_meal",
-        status="active",
-        notes=None,
-        created_by_user_id=123,
-        created_by_username="TestUser",
-        group_chat_id=-100,
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-        start_date=None,
-        end_date=None,
-    )
+    defaults = {
+        "id": 1,
+        "medicine_id": None,
+        "medicine_name": "Napa",
+        "dosage_quantity": 1,
+        "dosage_unit": "tablet",
+        "frequency": "daily",
+        "times_of_day": ["08:00", "20:00"],
+        "days_of_week": None,
+        "meal_relation": "after_meal",
+        "status": "active",
+        "notes": None,
+        "created_by_user_id": 123,
+        "created_by_username": "TestUser",
+        "group_chat_id": -100,
+        "created_at": datetime.now(),
+        "updated_at": datetime.now(),
+        "start_date": None,
+        "end_date": None,
+    }
     defaults.update(kwargs)
     return Routine(**defaults)
 
 
 def _make_interaction(**kwargs):
-    defaults = dict(
-        id=1,
-        drug_a_name="Napa",
-        drug_b_name="Warfarin",
-        severity="moderate",
-        description="Paracetamol may increase warfarin effect.",
-        source="BNFC",
-    )
+    defaults = {
+        "id": 1,
+        "drug_a_name": "Napa",
+        "drug_b_name": "Warfarin",
+        "severity": "moderate",
+        "description": "Paracetamol may increase warfarin effect.",
+        "source": "BNFC",
+    }
     defaults.update(kwargs)
     return DrugInteraction(**defaults)
 

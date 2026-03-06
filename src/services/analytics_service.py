@@ -1,14 +1,14 @@
 """Analytics service for usage patterns, cost tracking, and predictions."""
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any
 
 from src.database import (
+    ActivityLogRepository,
+    CostRepository,
     Database,
     MedicineRepository,
-    ActivityLogRepository,
     RoutineLogRepository,
-    CostRepository,
 )
 
 
@@ -18,7 +18,7 @@ class AnalyticsService:
     def __init__(self, db_path: str):
         self.db_path = db_path
 
-    async def get_full_report(self, group_chat_id: int, days: int = 30) -> Dict[str, Any]:
+    async def get_full_report(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
         """Generate a comprehensive analytics report."""
         async with Database(self.db_path) as db:
             activity_repo = ActivityLogRepository(db)
@@ -69,7 +69,7 @@ class AnalyticsService:
         medicines: list,
         group_chat_id: int,
         days: int,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Predict when medicines will need restocking based on usage rate."""
         predictions = []
         cutoff = datetime.now() - timedelta(days=days)

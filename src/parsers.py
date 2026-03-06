@@ -3,9 +3,9 @@
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Literal
-from dateutil import parser as date_parser
+from typing import Literal
 
+from dateutil import parser as date_parser
 
 CommandType = Literal[
     "add", "use", "search", "list", "routine", "cost", "interactions", "analytics", "unknown"
@@ -17,19 +17,19 @@ class ParsedCommand:
     """Parsed command with extracted information."""
 
     command_type: CommandType
-    medicine_name: Optional[str] = None
-    quantity: Optional[int] = None
+    medicine_name: str | None = None
+    quantity: int | None = None
     unit: str = "tablets"
-    expiry_date: Optional[datetime] = None
-    location: Optional[str] = None
+    expiry_date: datetime | None = None
+    location: str | None = None
     confidence: float = 1.0
     raw_text: str = ""
     # Phase 4: Routine fields
-    meal_relation: Optional[str] = None
-    schedule_times: Optional[list] = None
-    frequency: Optional[str] = None
+    meal_relation: str | None = None
+    schedule_times: list | None = None
+    frequency: str | None = None
     # Phase 5: Cost field
-    cost: Optional[float] = None
+    cost: float | None = None
 
 
 class CommandParser:
@@ -134,7 +134,7 @@ class AddCommandParser:
         "pc",
     ]
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse add command.
 
         Args:
@@ -229,7 +229,7 @@ class AddCommandParser:
         else:
             return "tablets"
 
-    def _extract_expiry_date(self, text: str) -> Optional[datetime]:
+    def _extract_expiry_date(self, text: str) -> datetime | None:
         """Extract expiry date from text.
 
         Args:
@@ -258,7 +258,7 @@ class AddCommandParser:
 
         return None
 
-    def _extract_location(self, text: str) -> Optional[str]:
+    def _extract_location(self, text: str) -> str | None:
         """Extract storage location from text.
 
         Args:
@@ -294,7 +294,7 @@ class UseCommandParser:
         r"(?:used|took|consume[d]?)\s+(?:some\s+)?(\w+(?:\s+\w+)?)",
     ]
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse use command.
 
         Args:
@@ -362,7 +362,7 @@ class SearchCommandParser:
         r"have\s+(?:we\s+)?(?:got\s+)?(\w+(?:\s+\w+)?)",
     ]
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse search command.
 
         Args:
@@ -409,7 +409,7 @@ class ListCommandParser:
         "inventory",
     ]
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse list command.
 
         Args:
@@ -445,7 +445,7 @@ class RoutineCommandParser:
     # Time conversion helpers
     TIME_PATTERN = re.compile(r"(\d{1,2})[:.:](\d{2})\s*(am|pm)?", re.IGNORECASE)
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse routine commands."""
         text_lower = text.lower().strip()
 
@@ -543,7 +543,7 @@ class CostCommandParser:
         re.IGNORECASE,
     )
 
-    def parse(self, text: str) -> Optional[ParsedCommand]:
+    def parse(self, text: str) -> ParsedCommand | None:
         """Parse cost commands."""
         text_lower = text.lower().strip()
 

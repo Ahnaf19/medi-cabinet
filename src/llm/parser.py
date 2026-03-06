@@ -1,7 +1,6 @@
 """LLM-based parser (Tier 2 fallback) for natural language understanding."""
 
 from datetime import datetime
-from typing import Optional
 
 from loguru import logger
 
@@ -34,7 +33,7 @@ class LLMParser:
     def __init__(self, provider: BaseLLMProvider):
         self.provider = provider
 
-    async def parse(self, text: str) -> Optional[ParsedCommand]:
+    async def parse(self, text: str) -> ParsedCommand | None:
         """Parse natural language text using LLM.
 
         Args:

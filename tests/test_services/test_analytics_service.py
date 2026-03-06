@@ -3,9 +3,6 @@
 import pytest
 
 from src.database import (
-    CostRepository,
-    MedicineRepository,
-    MedicineData,
     CostData,
 )
 

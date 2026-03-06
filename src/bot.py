@@ -2,6 +2,8 @@
 
 import sys
 from datetime import time
+
+from loguru import logger
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -9,25 +11,24 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-from loguru import logger
 
 from config.config import Settings
 from src.commands import (
-    handle_start,
+    handle_add_cost,
+    handle_analytics,
+    handle_check_interactions,
+    handle_cost_summary,
+    handle_delete_medicine,
+    handle_error,
     handle_help,
     handle_message,
-    handle_delete_medicine,
-    handle_stats,
+    handle_photo,
     handle_routine,
     handle_routine_callback,
-    handle_check_interactions,
-    handle_add_cost,
-    handle_cost_summary,
-    handle_photo,
-    handle_analytics,
-    handle_error,
-    scheduled_expiry_check,
+    handle_start,
+    handle_stats,
     scheduled_backup,
+    scheduled_expiry_check,
 )
 
 
@@ -187,7 +188,7 @@ class MediCabinetBot:
             logger.info("Bot is now running. Press Ctrl+C to stop.")
             self.app.run_polling(allowed_updates=None)
 
-        except Exception as e:
+        except Exception:
             logger.exception("Fatal error occurred")
             raise
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.llm.base import BaseLLMProvider, LLMMessage, LLMResponse
+from src.llm.base import BaseLLMProvider, LLMResponse
 from src.llm.factory import LLMProviderFactory
 
 

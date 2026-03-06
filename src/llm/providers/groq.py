@@ -1,6 +1,6 @@
 """Groq LLM provider using OpenAI-compatible API."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from loguru import logger
@@ -27,13 +27,13 @@ class GroqProvider(BaseLLMProvider):
     def supports_tool_calling(self) -> bool:
         return True
 
-    def _build_headers(self) -> Dict[str, str]:
+    def _build_headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
 
-    def _format_messages(self, messages: List[LLMMessage]) -> List[Dict[str, Any]]:
+    def _format_messages(self, messages: list[LLMMessage]) -> list[dict[str, Any]]:
         """Convert LLMMessage list to Groq API format."""
         formatted = []
         for msg in messages:
@@ -66,12 +66,12 @@ class GroqProvider(BaseLLMProvider):
 
     async def complete(
         self,
-        messages: List[LLMMessage],
-        tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
     ) -> LLMResponse:
         """Send completion request to Groq API."""
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": self.model,
             "messages": self._format_messages(messages),
             "temperature": self.temperature,
@@ -110,8 +110,8 @@ class GroqProvider(BaseLLMProvider):
 
     async def complete_with_vision(
         self,
-        messages: List[LLMMessage],
-        tools: Optional[List[Dict[str, Any]]] = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
     ) -> LLMResponse:
         """Send vision completion request using Groq's vision model."""
         original_model = self.model

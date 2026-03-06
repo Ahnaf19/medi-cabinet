@@ -1,7 +1,5 @@
 """LLM provider factory with registry pattern."""
 
-from typing import Dict, Optional, Type
-
 from loguru import logger
 
 from src.llm.base import BaseLLMProvider
@@ -10,10 +8,10 @@ from src.llm.base import BaseLLMProvider
 class LLMProviderFactory:
     """Registry-based factory for LLM providers."""
 
-    _registry: Dict[str, Type[BaseLLMProvider]] = {}
+    _registry: dict[str, type[BaseLLMProvider]] = {}
 
     @classmethod
-    def register(cls, name: str, provider_class: Type[BaseLLMProvider]) -> None:
+    def register(cls, name: str, provider_class: type[BaseLLMProvider]) -> None:
         """Register a provider class.
 
         Args:
@@ -56,7 +54,7 @@ class LLMProviderFactory:
         )
 
     @classmethod
-    def from_config(cls, settings) -> Optional[BaseLLMProvider]:
+    def from_config(cls, settings) -> BaseLLMProvider | None:
         """Create a provider from application settings.
 
         Returns None if LLM is disabled (no provider configured).

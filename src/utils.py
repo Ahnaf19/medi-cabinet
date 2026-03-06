@@ -1,14 +1,15 @@
 """Utility functions for the medi-cabinet bot."""
 
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from datetime import datetime
+from typing import Any
+
 from dateutil import parser as date_parser
 
 from config.config import Settings
-from src.database import Medicine, Activity, Routine, DrugInteraction
+from src.database import Activity, DrugInteraction, Medicine, Routine
 
 
-def format_medicine_list(medicines: List[Medicine], low_stock_threshold: int = 3) -> str:
+def format_medicine_list(medicines: list[Medicine], low_stock_threshold: int = 3) -> str:
     """Format a list of medicines for display.
 
     Args:
@@ -99,7 +100,7 @@ def format_date(date: datetime) -> str:
         return date.strftime("%b %d, %Y")
 
 
-def parse_date_flexible(date_str: str) -> Optional[datetime]:
+def parse_date_flexible(date_str: str) -> datetime | None:
     """Parse date string in various formats.
 
     Args:
@@ -177,7 +178,7 @@ def sanitize_medicine_name(name: str) -> str:
     return sanitized.title()
 
 
-def generate_usage_stats(stats_data: Dict[str, Any]) -> str:
+def generate_usage_stats(stats_data: dict[str, Any]) -> str:
     """Generate formatted usage statistics message.
 
     Args:
@@ -218,7 +219,7 @@ def generate_usage_stats(stats_data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_activity_history(activities: List[Activity]) -> str:
+def format_activity_history(activities: list[Activity]) -> str:
     """Format activity history for display.
 
     Args:
@@ -254,7 +255,7 @@ def format_activity_history(activities: List[Activity]) -> str:
     return "\n".join(lines)
 
 
-def build_confirmation_keyboard(callback_data: str) -> Dict[str, Any]:
+def build_confirmation_keyboard(callback_data: str) -> dict[str, Any]:
     """Build inline keyboard for confirmation.
 
     Args:
@@ -276,8 +277,8 @@ def build_confirmation_keyboard(callback_data: str) -> Dict[str, Any]:
 
 
 def build_medicine_selection_keyboard(
-    medicines: List[tuple], prefix: str = "select"
-) -> Dict[str, Any]:
+    medicines: list[tuple], prefix: str = "select"
+) -> dict[str, Any]:
     """Build inline keyboard for medicine selection.
 
     Args:
@@ -342,7 +343,7 @@ def escape_markdown_v2(text: str) -> str:
     return text
 
 
-def format_low_stock_alert(medicines: List[Medicine]) -> str:
+def format_low_stock_alert(medicines: list[Medicine]) -> str:
     """Format low stock alert message.
 
     Args:
@@ -362,7 +363,7 @@ def format_low_stock_alert(medicines: List[Medicine]) -> str:
     return "\n".join(lines)
 
 
-def format_expiry_warning(medicines: List[Medicine]) -> str:
+def format_expiry_warning(medicines: list[Medicine]) -> str:
     """Format expiry warning message.
 
     Args:
@@ -488,7 +489,7 @@ Need help? Just ask naturally!
 # --- Phase 4: Routine formatting ---
 
 
-def format_routine_list(routines: List[Routine]) -> str:
+def format_routine_list(routines: list[Routine]) -> str:
     """Format list of routines for display."""
     if not routines:
         return "No routines found."
@@ -526,7 +527,7 @@ def format_routine_detail(routine: Routine) -> str:
 # --- Phase 4: Interaction formatting ---
 
 
-def format_interaction_warning(interactions: List[DrugInteraction]) -> str:
+def format_interaction_warning(interactions: list[DrugInteraction]) -> str:
     """Format drug interaction warnings for display."""
     if not interactions:
         return ""
@@ -553,7 +554,7 @@ def format_interaction_warning(interactions: List[DrugInteraction]) -> str:
 # --- Phase 5: Cost formatting ---
 
 
-def format_cost_summary(summary: Dict[str, Any], currency: str = "BDT") -> str:
+def format_cost_summary(summary: dict[str, Any], currency: str = "BDT") -> str:
     """Format cost summary for display."""
     lines = [
         f"*Cost Summary (Last {summary.get('period_days', 30)} days)*\n",
@@ -578,7 +579,7 @@ def format_cost_summary(summary: Dict[str, Any], currency: str = "BDT") -> str:
 # --- Phase 5: Adherence formatting ---
 
 
-def format_adherence_stats(stats: Dict[str, Any]) -> str:
+def format_adherence_stats(stats: dict[str, Any]) -> str:
     """Format adherence statistics."""
     if not stats or stats.get("total", 0) == 0:
         return "No routine data available yet."
@@ -601,7 +602,7 @@ def format_adherence_stats(stats: Dict[str, Any]) -> str:
 # --- Phase 5: Analytics formatting ---
 
 
-def format_analytics_report(report: Dict[str, Any]) -> str:
+def format_analytics_report(report: dict[str, Any]) -> str:
     """Format comprehensive analytics report."""
     lines = ["*Analytics Report*\n"]
 
@@ -630,7 +631,7 @@ def format_analytics_report(report: Dict[str, Any]) -> str:
     # Cost summary
     cost = report.get("cost_summary", {})
     if cost.get("total_spent", 0) > 0:
-        lines.append(f"\n*Spending:*")
+        lines.append("\n*Spending:*")
         lines.append(f"  Total: {cost['total_spent']:.0f} BDT")
 
     # Adherence

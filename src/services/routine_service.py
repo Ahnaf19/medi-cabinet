@@ -1,17 +1,15 @@
 """Routine service - orchestrates routine CRUD, scheduling, and stock deduction."""
 
-from typing import List, Optional
-
 from loguru import logger
 
 from src.database import (
     Database,
-    RoutineRepository,
-    RoutineLogRepository,
     MedicineRepository,
     Routine,
     RoutineData,
     RoutineLog,
+    RoutineLogRepository,
+    RoutineRepository,
 )
 
 
@@ -44,9 +42,7 @@ class RoutineService:
         logger.info(f"Created routine {routine.id} for {routine.medicine_name}")
         return routine
 
-    async def list_routines(
-        self, group_chat_id: int, user_id: Optional[int] = None
-    ) -> List[Routine]:
+    async def list_routines(self, group_chat_id: int, user_id: int | None = None) -> list[Routine]:
         """List routines for a group, optionally filtered by user."""
         async with Database(self.db_path) as db:
             repo = RoutineRepository(db)
@@ -54,7 +50,7 @@ class RoutineService:
                 return await repo.get_user_routines(user_id, group_chat_id)
             return await repo.get_active_routines(group_chat_id)
 
-    async def pause_routine(self, routine_id: int) -> Optional[Routine]:
+    async def pause_routine(self, routine_id: int) -> Routine | None:
         """Pause a routine and remove scheduled jobs."""
         async with Database(self.db_path) as db:
             repo = RoutineRepository(db)
@@ -65,7 +61,7 @@ class RoutineService:
 
         return routine
 
-    async def resume_routine(self, routine_id: int) -> Optional[Routine]:
+    async def resume_routine(self, routine_id: int) -> Routine | None:
         """Resume a paused routine."""
         async with Database(self.db_path) as db:
             repo = RoutineRepository(db)
@@ -85,7 +81,7 @@ class RoutineService:
             repo = RoutineRepository(db)
             return await repo.delete(routine_id)
 
-    async def mark_taken(self, log_id: int, routine_id: int) -> Optional[RoutineLog]:
+    async def mark_taken(self, log_id: int, routine_id: int) -> RoutineLog | None:
         """Mark a routine dose as taken and deduct from stock if linked."""
         async with Database(self.db_path) as db:
             log_repo = RoutineLogRepository(db)

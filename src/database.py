@@ -1,10 +1,11 @@
 """Database operations using repository pattern with async SQLite."""
 
 import json
-import aiosqlite
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple, Dict, Any
+from datetime import datetime, timedelta
+from typing import Any
+
+import aiosqlite
 from fuzzywuzzy import fuzz
 
 
@@ -16,8 +17,8 @@ class Medicine:
     name: str
     quantity: int
     unit: str
-    expiry_date: Optional[datetime]
-    location: Optional[str]
+    expiry_date: datetime | None
+    location: str | None
     added_by_user_id: int
     added_by_username: str
     added_date: datetime
@@ -32,7 +33,7 @@ class Activity:
     id: int
     medicine_id: int
     action: str
-    quantity_change: Optional[int]
+    quantity_change: int | None
     user_id: int
     username: str
     timestamp: datetime
@@ -46,8 +47,8 @@ class MedicineData:
     name: str
     quantity: int
     unit: str
-    expiry_date: Optional[datetime]
-    location: Optional[str]
+    expiry_date: datetime | None
+    location: str | None
     added_by_user_id: int
     added_by_username: str
     group_chat_id: int
@@ -78,7 +79,7 @@ class Database:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
-        self.conn: Optional[aiosqlite.Connection] = None
+        self.conn: aiosqlite.Connection | None = None
 
     async def __aenter__(self):
         """Open database connection."""
@@ -109,7 +110,7 @@ class Database:
         await self.conn.commit()
         return cursor
 
-    async def fetch_one(self, query: str, params: tuple = ()) -> Optional[aiosqlite.Row]:
+    async def fetch_one(self, query: str, params: tuple = ()) -> aiosqlite.Row | None:
         """Fetch one row from database.
 
         Args:
@@ -124,7 +125,7 @@ class Database:
         cursor = await self.conn.execute(query, params)
         return await cursor.fetchone()
 
-    async def fetch_all(self, query: str, params: tuple = ()) -> List[aiosqlite.Row]:
+    async def fetch_all(self, query: str, params: tuple = ()) -> list[aiosqlite.Row]:
         """Fetch all rows from database.
 
         Args:
@@ -286,7 +287,7 @@ class MedicineRepository:
 
         return self._row_to_medicine(updated_row)
 
-    async def find_by_exact_name(self, name: str, group_chat_id: int) -> Optional[Medicine]:
+    async def find_by_exact_name(self, name: str, group_chat_id: int) -> Medicine | None:
         """Find medicine by exact name (case-insensitive).
 
         Args:
@@ -308,7 +309,7 @@ class MedicineRepository:
 
     async def find_by_name_fuzzy(
         self, name: str, group_chat_id: int, threshold: int = 80
-    ) -> List[Tuple[Medicine, int]]:
+    ) -> list[tuple[Medicine, int]]:
         """Find medicines by fuzzy name matching.
 
         Args:
@@ -325,7 +326,7 @@ class MedicineRepository:
         )
 
         # Calculate fuzzy match scores
-        matches: List[Tuple[Medicine, int]] = []
+        matches: list[tuple[Medicine, int]] = []
         for row in rows:
             medicine = self._row_to_medicine(row)
             score = fuzz.ratio(name.lower(), medicine.name.lower())
@@ -338,7 +339,7 @@ class MedicineRepository:
 
         return matches
 
-    async def get_by_id(self, medicine_id: int, group_chat_id: int) -> Optional[Medicine]:
+    async def get_by_id(self, medicine_id: int, group_chat_id: int) -> Medicine | None:
         """Get medicine by ID with group isolation.
 
         Args:
@@ -358,7 +359,7 @@ class MedicineRepository:
 
         return self._row_to_medicine(row) if row else None
 
-    async def get_all(self, group_chat_id: int) -> List[Medicine]:
+    async def get_all(self, group_chat_id: int) -> list[Medicine]:
         """Get all medicines for a group.
 
         Args:
@@ -378,7 +379,7 @@ class MedicineRepository:
 
         return [self._row_to_medicine(row) for row in rows]
 
-    async def get_low_stock(self, group_chat_id: int, threshold: int = 3) -> List[Medicine]:
+    async def get_low_stock(self, group_chat_id: int, threshold: int = 3) -> list[Medicine]:
         """Get medicines with low stock.
 
         Args:
@@ -399,7 +400,7 @@ class MedicineRepository:
 
         return [self._row_to_medicine(row) for row in rows]
 
-    async def get_expiring_soon(self, group_chat_id: int, days: int = 30) -> List[Medicine]:
+    async def get_expiring_soon(self, group_chat_id: int, days: int = 30) -> list[Medicine]:
         """Get medicines expiring within specified days.
 
         Args:
@@ -484,7 +485,7 @@ class ActivityLogRepository:
         user_id: int,
         username: str,
         group_chat_id: int,
-        quantity_change: Optional[int] = None,
+        quantity_change: int | None = None,
     ) -> Activity:
         """Log an activity.
 
@@ -520,7 +521,7 @@ class ActivityLogRepository:
 
         return self._row_to_activity(row)
 
-    async def get_history(self, medicine_id: int, limit: int = 50) -> List[Activity]:
+    async def get_history(self, medicine_id: int, limit: int = 50) -> list[Activity]:
         """Get activity history for a medicine.
 
         Args:
@@ -542,7 +543,7 @@ class ActivityLogRepository:
 
         return [self._row_to_activity(row) for row in rows]
 
-    async def get_stats(self, group_chat_id: int, days: int = 30) -> Dict[str, Any]:
+    async def get_stats(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
         """Get usage statistics for a group.
 
         Args:
@@ -623,23 +624,23 @@ class Routine:
     """Routine entity."""
 
     id: int
-    medicine_id: Optional[int]
+    medicine_id: int | None
     medicine_name: str
     dosage_quantity: int
     dosage_unit: str
     frequency: str
-    times_of_day: List[str]
-    days_of_week: Optional[List[str]]
-    meal_relation: Optional[str]
+    times_of_day: list[str]
+    days_of_week: list[str] | None
+    meal_relation: str | None
     status: str
-    notes: Optional[str]
+    notes: str | None
     created_by_user_id: int
     created_by_username: str
     group_chat_id: int
     created_at: datetime
     updated_at: datetime
-    start_date: Optional[datetime]
-    end_date: Optional[datetime]
+    start_date: datetime | None
+    end_date: datetime | None
 
 
 @dataclass
@@ -649,7 +650,7 @@ class RoutineLog:
     id: int
     routine_id: int
     scheduled_time: datetime
-    actual_time: Optional[datetime]
+    actual_time: datetime | None
     status: str
     group_chat_id: int
     created_at: datetime
@@ -663,16 +664,16 @@ class RoutineData:
     dosage_quantity: int = 1
     dosage_unit: str = "tablets"
     frequency: str = "daily"
-    times_of_day: List[str] = field(default_factory=lambda: ["08:00"])
-    days_of_week: Optional[List[str]] = None
-    meal_relation: Optional[str] = None
-    notes: Optional[str] = None
+    times_of_day: list[str] = field(default_factory=lambda: ["08:00"])
+    days_of_week: list[str] | None = None
+    meal_relation: str | None = None
+    notes: str | None = None
     created_by_user_id: int = 0
     created_by_username: str = ""
     group_chat_id: int = 0
-    medicine_id: Optional[int] = None
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
+    medicine_id: int | None = None
+    start_date: datetime | None = None
+    end_date: datetime | None = None
 
 
 @dataclass
@@ -684,7 +685,7 @@ class DrugInteraction:
     drug_b_name: str
     severity: str
     description: str
-    source: Optional[str]
+    source: str | None
 
 
 @dataclass
@@ -693,10 +694,10 @@ class MedicineCost:
 
     id: int
     medicine_id: int
-    cost_per_unit: Optional[float]
+    cost_per_unit: float | None
     currency: str
-    purchase_date: Optional[datetime]
-    total_quantity: Optional[int]
+    purchase_date: datetime | None
+    total_quantity: int | None
     total_cost: float
     user_id: int
     username: str
@@ -714,9 +715,9 @@ class CostData:
     username: str
     group_chat_id: int
     currency: str = "BDT"
-    cost_per_unit: Optional[float] = None
-    total_quantity: Optional[int] = None
-    purchase_date: Optional[datetime] = None
+    cost_per_unit: float | None = None
+    total_quantity: int | None = None
+    purchase_date: datetime | None = None
 
 
 class RoutineRepository:
@@ -783,12 +784,12 @@ class RoutineRepository:
             raise DatabaseError("Failed to create routine")
         return self._row_to_routine(row)
 
-    async def get_by_id(self, routine_id: int) -> Optional[Routine]:
+    async def get_by_id(self, routine_id: int) -> Routine | None:
         """Get routine by ID."""
         row = await self.db.fetch_one("SELECT * FROM routines WHERE id = ?", (routine_id,))
         return self._row_to_routine(row) if row else None
 
-    async def get_active_routines(self, group_chat_id: Optional[int] = None) -> List[Routine]:
+    async def get_active_routines(self, group_chat_id: int | None = None) -> list[Routine]:
         """Get all active routines, optionally filtered by group."""
         if group_chat_id is not None:
             rows = await self.db.fetch_all(
@@ -801,7 +802,7 @@ class RoutineRepository:
             )
         return [self._row_to_routine(row) for row in rows]
 
-    async def get_user_routines(self, user_id: int, group_chat_id: int) -> List[Routine]:
+    async def get_user_routines(self, user_id: int, group_chat_id: int) -> list[Routine]:
         """Get routines created by a specific user in a group."""
         rows = await self.db.fetch_all(
             """
@@ -813,7 +814,7 @@ class RoutineRepository:
         )
         return [self._row_to_routine(row) for row in rows]
 
-    async def update_status(self, routine_id: int, status: str) -> Optional[Routine]:
+    async def update_status(self, routine_id: int, status: str) -> Routine | None:
         """Update routine status (active/paused/completed)."""
         await self.db.execute(
             "UPDATE routines SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -872,7 +873,7 @@ class RoutineLogRepository:
             raise DatabaseError("Failed to create routine log")
         return self._row_to_log(row)
 
-    async def mark_taken(self, log_id: int) -> Optional[RoutineLog]:
+    async def mark_taken(self, log_id: int) -> RoutineLog | None:
         """Mark a routine log as taken."""
         await self.db.execute(
             "UPDATE routine_logs SET status = 'taken', actual_time = CURRENT_TIMESTAMP WHERE id = ?",
@@ -902,7 +903,7 @@ class RoutineLogRepository:
         )
         return cursor.rowcount
 
-    async def get_pending_log(self, routine_id: int) -> Optional[RoutineLog]:
+    async def get_pending_log(self, routine_id: int) -> RoutineLog | None:
         """Get the most recent pending log for a routine."""
         row = await self.db.fetch_one(
             """
@@ -915,7 +916,7 @@ class RoutineLogRepository:
         )
         return self._row_to_log(row) if row else None
 
-    async def get_adherence_stats(self, group_chat_id: int, days: int = 30) -> Dict[str, Any]:
+    async def get_adherence_stats(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
         """Get adherence statistics for routines in a group."""
         cutoff = datetime.now() - timedelta(days=days)
 
@@ -966,7 +967,7 @@ class DrugInteractionRepository:
             source=row["source"],
         )
 
-    async def check_interaction(self, drug_a: str, drug_b: str) -> Optional[DrugInteraction]:
+    async def check_interaction(self, drug_a: str, drug_b: str) -> DrugInteraction | None:
         """Check if two drugs have a known interaction."""
         row = await self.db.fetch_one(
             """
@@ -980,7 +981,7 @@ class DrugInteractionRepository:
 
     async def check_against_cabinet(
         self, drug_name: str, group_chat_id: int
-    ) -> List[DrugInteraction]:
+    ) -> list[DrugInteraction]:
         """Check a drug against all medicines in the cabinet."""
         rows = await self.db.fetch_all(
             """
@@ -997,7 +998,7 @@ class DrugInteractionRepository:
         )
         return [self._row_to_interaction(row) for row in rows]
 
-    async def seed_interactions(self, interactions: List[Dict[str, str]]) -> int:
+    async def seed_interactions(self, interactions: list[dict[str, str]]) -> int:
         """Seed the database with known drug interactions.
 
         Args:
@@ -1082,7 +1083,7 @@ class CostRepository:
             raise DatabaseError("Failed to create cost entry")
         return self._row_to_cost(row)
 
-    async def get_total_spent(self, group_chat_id: int, days: Optional[int] = None) -> float:
+    async def get_total_spent(self, group_chat_id: int, days: int | None = None) -> float:
         """Get total amount spent on medicines."""
         if days:
             cutoff = datetime.now() - timedelta(days=days)
@@ -1105,7 +1106,7 @@ class CostRepository:
             )
         return float(row["total"]) if row else 0.0
 
-    async def get_cost_summary(self, group_chat_id: int, days: int = 30) -> Dict[str, Any]:
+    async def get_cost_summary(self, group_chat_id: int, days: int = 30) -> dict[str, Any]:
         """Get cost summary grouped by medicine."""
         cutoff = datetime.now() - timedelta(days=days)
 

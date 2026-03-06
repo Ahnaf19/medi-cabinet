@@ -1,12 +1,11 @@
 """Tests for command parsers."""
 
-import pytest
 from src.parsers import (
-    CommandParser,
     AddCommandParser,
-    UseCommandParser,
-    SearchCommandParser,
+    CommandParser,
     ListCommandParser,
+    SearchCommandParser,
+    UseCommandParser,
 )
 
 

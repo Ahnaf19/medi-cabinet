@@ -1,6 +1,6 @@
 """Tests for routine and cost command parsers."""
 
-from src.parsers import RoutineCommandParser, CostCommandParser, CommandParser
+from src.parsers import CommandParser, CostCommandParser, RoutineCommandParser
 
 
 class TestRoutineCommandParser:

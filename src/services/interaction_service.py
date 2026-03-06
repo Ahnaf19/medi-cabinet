@@ -2,11 +2,10 @@
 
 import json
 from pathlib import Path
-from typing import List
 
 from loguru import logger
 
-from src.database import Database, DrugInteractionRepository, DrugInteraction
+from src.database import Database, DrugInteraction, DrugInteractionRepository
 
 
 class InteractionService:
@@ -17,13 +16,13 @@ class InteractionService:
 
     async def check_against_cabinet(
         self, drug_name: str, group_chat_id: int
-    ) -> List[DrugInteraction]:
+    ) -> list[DrugInteraction]:
         """Check a drug against all medicines currently in the cabinet."""
         async with Database(self.db_path) as db:
             repo = DrugInteractionRepository(db)
             return await repo.check_against_cabinet(drug_name, group_chat_id)
 
-    async def check_pair(self, drug_a: str, drug_b: str) -> List[DrugInteraction]:
+    async def check_pair(self, drug_a: str, drug_b: str) -> list[DrugInteraction]:
         """Check if two specific drugs interact."""
         async with Database(self.db_path) as db:
             repo = DrugInteractionRepository(db)
@@ -48,7 +47,7 @@ class InteractionService:
         return count
 
     @staticmethod
-    def format_warnings(interactions: List[DrugInteraction]) -> str:
+    def format_warnings(interactions: list[DrugInteraction]) -> str:
         """Format interaction warnings for display."""
         if not interactions:
             return ""

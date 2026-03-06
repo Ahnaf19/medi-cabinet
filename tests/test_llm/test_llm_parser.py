@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.llm.base import BaseLLMProvider, LLMMessage, LLMResponse, ToolCall
+from src.llm.base import BaseLLMProvider, LLMResponse, ToolCall
 from src.llm.parser import LLMParser
 
 

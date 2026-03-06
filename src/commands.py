@@ -1,43 +1,41 @@
 """Command handlers for the Telegram bot."""
 
 from datetime import datetime
-from telegram import Update
-from telegram.ext import ContextTypes
-from telegram.constants import ParseMode
+
 from loguru import logger
+from telegram import Update
+from telegram.constants import ParseMode
+from telegram.ext import ContextTypes
 
 from config.config import Settings
 from src.database import (
-    Database,
-    MedicineRepository,
     ActivityLogRepository,
-    RoutineRepository,
-    RoutineLogRepository,
-    CostRepository,
-    MedicineData,
-    RoutineData,
     CostData,
-    InsufficientStockError,
+    CostRepository,
+    Database,
     DatabaseError,
+    InsufficientStockError,
+    MedicineData,
+    MedicineRepository,
+    RoutineData,
+    RoutineRepository,
 )
 from src.parsers import CommandParser
 from src.utils import (
-    format_medicine_list,
-    format_medicine_detail,
-    format_activity_history,
-    format_low_stock_alert,
-    format_expiry_warning,
-    format_routine_list,
-    format_routine_detail,
-    format_interaction_warning,
-    format_cost_summary,
-    format_adherence_stats,
-    format_analytics_report,
-    generate_usage_stats,
-    get_welcome_message,
-    get_help_message,
-    is_admin,
     calculate_days_until_expiry,
+    format_analytics_report,
+    format_cost_summary,
+    format_expiry_warning,
+    format_interaction_warning,
+    format_low_stock_alert,
+    format_medicine_detail,
+    format_medicine_list,
+    format_routine_detail,
+    format_routine_list,
+    generate_usage_stats,
+    get_help_message,
+    get_welcome_message,
+    is_admin,
 )
 
 
@@ -198,7 +196,7 @@ async def handle_add_medicine(
             if medicine.expiry_date:
                 days = calculate_days_until_expiry(medicine.expiry_date)
                 if days <= 0:
-                    response += f"\n EXPIRED!"
+                    response += "\n EXPIRED!"
                 elif days <= 30:
                     response += f"\n Expiring in {days} days"
 
@@ -222,7 +220,7 @@ async def handle_add_medicine(
             except Exception:
                 pass  # Don't block add if interaction check fails
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while adding medicine")
             await update.message.reply_text(
                 " Sorry, there was an error adding the medicine. Please try again."
@@ -331,7 +329,7 @@ async def handle_use_medicine(
                 parse_mode=ParseMode.MARKDOWN,
             )
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while using medicine")
             await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
@@ -403,7 +401,7 @@ async def handle_search_medicine(
 
             await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while searching medicine")
             await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
@@ -455,7 +453,7 @@ async def handle_list_all(
 
             await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while listing medicines")
             await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
@@ -538,7 +536,7 @@ async def handle_delete_medicine(
             else:
                 await update.message.reply_text(" Failed to delete medicine. Please try again.")
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while deleting medicine")
             await update.message.reply_text(" Sorry, there was an error. Please try again.")
 
@@ -564,7 +562,7 @@ async def handle_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
             await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
 
-        except DatabaseError as e:
+        except DatabaseError:
             logger.exception("Database error while generating stats")
             await update.message.reply_text(
                 " Sorry, there was an error generating statistics. Please try again."
@@ -635,7 +633,7 @@ async def scheduled_expiry_check(context: ContextTypes.DEFAULT_TYPE) -> None:
                     except Exception as e:
                         logger.warning(f"Could not send low stock alert to {group_chat_id}: {e}")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error in scheduled expiry check")
 
 
@@ -660,7 +658,7 @@ async def scheduled_backup(context: ContextTypes.DEFAULT_TYPE) -> None:
         shutil.copy(config.database_path, backup_path)
         logger.info(f"Database backed up to {backup_path}")
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to backup database")
 
 
@@ -766,8 +764,7 @@ async def _handle_routine_from_text(
     svc = RoutineService(config.database_path, scheduler)
     routine = await svc.create_routine(data)
 
-    times_str = ", ".join(routine.times_of_day)
-    response = f" Routine created!\n\n"
+    response = " Routine created!\n\n"
     response += format_routine_detail(routine)
     await update.message.reply_text(response, parse_mode=ParseMode.MARKDOWN)
 
@@ -833,7 +830,7 @@ async def handle_routine_callback(update: Update, context: ContextTypes.DEFAULT_
     svc = RoutineService(config.database_path, scheduler)
 
     if action == "taken":
-        log_entry = await svc.mark_taken(log_id, routine_id)
+        await svc.mark_taken(log_id, routine_id)
         username = update.effective_user.first_name or "Someone"
         await query.edit_message_text(
             f"{query.message.text}\n\n *{username}* took this dose!",

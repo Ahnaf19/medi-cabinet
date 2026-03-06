@@ -1,16 +1,17 @@
 """Routine scheduler integrating with python-telegram-bot's JobQueue."""
 
-from datetime import datetime, time as dt_time
+from datetime import datetime
+from datetime import time as dt_time
 
+from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from loguru import logger
 
 from src.database import (
     Database,
-    RoutineRepository,
-    RoutineLogRepository,
     Routine,
+    RoutineLogRepository,
+    RoutineRepository,
 )
 
 
@@ -105,7 +106,7 @@ class RoutineScheduler:
             )
 
         # Build message
-        msg = f"Time to take your medicine!\n\n"
+        msg = "Time to take your medicine!\n\n"
         msg += f"*{medicine_name}* - {dosage_qty} {dosage_unit}"
         if meal_relation:
             relation_text = meal_relation.replace("_", " ").title()

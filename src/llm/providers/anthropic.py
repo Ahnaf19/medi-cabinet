@@ -1,6 +1,6 @@
 """Anthropic LLM provider (placeholder)."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.llm.base import BaseLLMProvider, LLMMessage, LLMResponse
 from src.llm.factory import LLMProviderFactory
@@ -23,9 +23,9 @@ class AnthropicProvider(BaseLLMProvider):
 
     async def complete(
         self,
-        messages: List[LLMMessage],
-        tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
     ) -> LLMResponse:
         raise NotImplementedError(
             "Anthropic provider not yet implemented. "

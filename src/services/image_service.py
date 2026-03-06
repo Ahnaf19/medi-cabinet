@@ -2,14 +2,13 @@
 
 import base64
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from loguru import logger
 
 from src.database import MedicineData
 from src.llm.base import BaseLLMProvider, LLMMessage
 from src.llm.tools import IMAGE_EXTRACTION_TOOL
-
 
 IMAGE_SYSTEM_PROMPT = """You are a medicine identification assistant.
 Analyze the photo and extract information about any medicines visible.
@@ -32,7 +31,7 @@ class ImageService:
         user_id: int,
         username: str,
         group_chat_id: int,
-    ) -> List[MedicineData]:
+    ) -> list[MedicineData]:
         """Extract medicine data from a photo.
 
         Args:
@@ -78,7 +77,7 @@ class ImageService:
         user_id: int,
         username: str,
         group_chat_id: int,
-    ) -> List[MedicineData]:
+    ) -> list[MedicineData]:
         """Parse LLM response into MedicineData objects."""
         medicines = []
 
@@ -121,7 +120,7 @@ class ImageService:
 
     @staticmethod
     def _med_dict_to_data(
-        med: Dict[str, Any],
+        med: dict[str, Any],
         user_id: int,
         username: str,
         group_chat_id: int,

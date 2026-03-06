@@ -3,7 +3,7 @@
 import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
@@ -12,9 +12,9 @@ class LLMMessage:
 
     role: str  # "system", "user", "assistant", "tool"
     content: str
-    tool_call_id: Optional[str] = None
-    image_url: Optional[str] = None
-    image_base64: Optional[str] = None
+    tool_call_id: str | None = None
+    image_url: str | None = None
+    image_base64: str | None = None
 
 
 @dataclass
@@ -23,24 +23,24 @@ class ToolCall:
 
     id: str
     name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
 
 
 @dataclass
 class LLMResponse:
     """Response from an LLM completion."""
 
-    content: Optional[str] = None
-    tool_calls: List[ToolCall] = field(default_factory=list)
+    content: str | None = None
+    tool_calls: list[ToolCall] = field(default_factory=list)
     model: str = ""
-    usage: Dict[str, int] = field(default_factory=dict)
-    raw: Optional[Dict[str, Any]] = None
+    usage: dict[str, int] = field(default_factory=dict)
+    raw: dict[str, Any] | None = None
 
     @property
     def has_tool_calls(self) -> bool:
         return len(self.tool_calls) > 0
 
-    def get_tool_arguments(self, tool_name: str) -> Optional[Dict[str, Any]]:
+    def get_tool_arguments(self, tool_name: str) -> dict[str, Any] | None:
         """Get arguments for a specific tool call by name."""
         for tc in self.tool_calls:
             if tc.name == tool_name:
@@ -73,9 +73,9 @@ class BaseLLMProvider(ABC):
     @abstractmethod
     async def complete(
         self,
-        messages: List[LLMMessage],
-        tools: Optional[List[Dict[str, Any]]] = None,
-        tool_choice: Optional[str] = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str | None = None,
     ) -> LLMResponse:
         """Send a completion request.
 
@@ -91,8 +91,8 @@ class BaseLLMProvider(ABC):
 
     async def complete_with_vision(
         self,
-        messages: List[LLMMessage],
-        tools: Optional[List[Dict[str, Any]]] = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
     ) -> LLMResponse:
         """Send a vision completion request (for image analysis).
 
@@ -105,7 +105,7 @@ class BaseLLMProvider(ABC):
         )
 
     @staticmethod
-    def _parse_tool_calls(raw_tool_calls: List[Dict[str, Any]]) -> List[ToolCall]:
+    def _parse_tool_calls(raw_tool_calls: list[dict[str, Any]]) -> list[ToolCall]:
         """Parse raw tool calls from API response into ToolCall objects."""
         tool_calls = []
         for tc in raw_tool_calls:
